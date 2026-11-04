@@ -196,7 +196,6 @@ void main() {
     final ref = reference(12)..finishStudy();
     for (var row = 0; row < 3; row++) {
       await placeRight(t, ref, row);
-      ref.tray; // mirrored by placeRight
     }
     // placeRight dropped on `ref`, not `a`; mirror the screen's attempt.
     expect(a.placed.length, 3);
@@ -313,6 +312,39 @@ void main() {
     await t.pump();
     expect(find.byType(Draggable<Block>), findsNWidgets(4));
     expect(find.text('+7'), findsOneWidget);
+  });
+
+  testWidgets('the pager is ignored while a block is held', (t) async {
+    final blocks = [
+      for (var i = 0; i < 11; i++)
+        Block(
+          color: BlockColor.green,
+          shape: BlockShape.rectangle,
+          width: 0.3 + i * 0.01,
+          height: 30,
+        ),
+    ];
+    await t.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: BlockTray(blocks: blocks)),
+        ),
+      ),
+    );
+    final g = await t.startGesture(
+      t.getCenter(find.byType(Draggable<Block>).at(0)),
+    );
+    await g.moveBy(const Offset(0, -30));
+    await t.pump();
+    await t.tap(find.text('+4'));
+    await t.pump();
+    expect(find.text('+4'), findsOneWidget);
+    expect(find.byType(Draggable<Block>), findsNWidgets(7));
+    await g.up();
+    await t.pump();
+    await t.tap(find.text('+4'));
+    await t.pump();
+    expect(find.byType(Draggable<Block>), findsNWidgets(4));
   });
 
   testWidgets('second look: no button when no ad is ready', (t) async {

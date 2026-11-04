@@ -46,3 +46,4 @@ app.*.map.json
 
 # Superpowers scratch workspace
 .superpowers/
+test/**/failures/

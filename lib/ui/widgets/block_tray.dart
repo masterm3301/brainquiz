@@ -92,7 +92,11 @@ class _BlockTrayState extends State<BlockTray> {
       if (paged)
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _page = (page + 1) % pages),
+          onTap: () {
+            // Paging mid-drag would unmount the held tile and strand the lock.
+            if (_activeKey != null) return;
+            setState(() => _page = (page + 1) % pages);
+          },
           child: _Frame(
             child: Text(
               '+${blocks.length - shown.length}',
