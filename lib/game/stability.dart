@@ -16,11 +16,16 @@ class PlacedBlock {
 enum Side { left, right }
 
 class CrookedDrop {
-  const CrookedDrop(this.row, this.side);
+  const CrookedDrop(this.row, this.offset);
 
   /// 1-based, bottom block = 1.
   final int row;
-  final Side side;
+
+  /// Distance from the block below, as an arena-width fraction. Negative is
+  /// to the left.
+  final double offset;
+
+  Side get side => offset < 0 ? Side.left : Side.right;
 }
 
 class StabilityReport {
@@ -88,7 +93,7 @@ StabilityReport assessStability({
     if (p.block != target[i]) wrongRows.add(i + 1);
     final offset = p.x - prevX;
     if (offset.abs() > dropTolerance) {
-      crooked.add(CrookedDrop(i + 1, offset < 0 ? Side.left : Side.right));
+      crooked.add(CrookedDrop(i + 1, offset));
       sumOffset += offset.abs();
     }
     prevX = p.x;

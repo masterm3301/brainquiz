@@ -39,9 +39,14 @@ String _rows(List<int> rows) {
   return 'Rows $head and ${rows.last} did';
 }
 
-String _crookedDetail(CrookedDrop first) =>
-    'The ${_ordinal(first.row)} block was dropped off to the ${_side(first.side)}, '
-    'which pulled the stack off the pillar.';
+/// Blames the drop that missed by the most; on a tie, the lowest of them.
+String _crookedDetail(List<CrookedDrop> crooked) {
+  final worst = crooked.reduce(
+    (a, b) => b.offset.abs() > a.offset.abs() ? b : a,
+  );
+  return 'The ${_ordinal(worst.row)} block was dropped off to the '
+      '${_side(worst.side)}, which pulled the stack off the pillar.';
+}
 
 ResultText explainFall(StabilityReport report, {required int total}) {
   final wrong = report.wrongCount;
@@ -57,7 +62,7 @@ ResultText explainFall(StabilityReport report, {required int total}) {
   if (wrong == 0) {
     return ResultText(
       headline: 'Right blocks, crooked stack',
-      detail: _crookedDetail(crooked.first),
+      detail: _crookedDetail(crooked),
     );
   }
   final wrongDetail =
@@ -68,7 +73,7 @@ ResultText explainFall(StabilityReport report, {required int total}) {
   }
   return ResultText(
     headline: '${_wrongHeadline(wrong)}, crooked stack',
-    detail: '$wrongDetail ${_crookedDetail(crooked.first)}',
+    detail: '$wrongDetail ${_crookedDetail(crooked)}',
   );
 }
 
