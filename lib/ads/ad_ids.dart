@@ -1,5 +1,8 @@
 import 'dart:io' show Platform;
 
+import 'package:google_mobile_ads/google_mobile_ads.dart'
+    show MaxAdContentRating;
+
 /// Google's published test IDs only. No real IDs belong here.
 class AdIds {
   const AdIds._();
@@ -14,4 +17,12 @@ class AdIds {
     if (Platform.isIOS) return rewardedIos;
     return null;
   }
+}
+
+/// The single place to change ad content rating and personalization.
+class AdPolicy {
+  const AdPolicy._();
+
+  static final String maxContentRating = MaxAdContentRating.t;
+  static const bool nonPersonalizedAds = true;
 }

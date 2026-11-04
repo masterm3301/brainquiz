@@ -20,9 +20,27 @@ void main() {
     ads.complete(false);
     expect(await first, isFalse);
 
+    ads.ready = true;
     final second = ads.show();
     expect(ads.showCount, 2);
     ads.complete(true);
     expect(await second, isTrue);
+  });
+  test('FakeAds show returns false at once when not ready', () async {
+    final ads = FakeAds();
+    expect(await ads.show(), isFalse);
+    expect(ads.showCount, 0);
+  });
+
+  test('FakeAds is not ready while showing and rejects a second show',
+      () async {
+    final ads = FakeAds()..ready = true;
+    final first = ads.show();
+    expect(ads.isReady.value, isFalse);
+    ads.ready = true;
+    expect(await ads.show(), isFalse);
+    expect(ads.showCount, 1);
+    ads.complete(true);
+    expect(await first, isTrue);
   });
 }

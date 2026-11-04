@@ -21,7 +21,9 @@ class FakeAds implements RewardedAds {
 
   @override
   Future<bool> show() {
+    if (!ready || _pending != null) return Future.value(false);
     showCount++;
+    ready = false;
     final pending = Completer<bool>();
     _pending = pending;
     return pending.future;

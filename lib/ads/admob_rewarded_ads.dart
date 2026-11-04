@@ -11,6 +11,8 @@ import 'rewarded_ads.dart';
 class AdMobRewardedAds implements RewardedAds {
   static const Duration _retryDelay = Duration(seconds: 30);
   static const int _maxRetries = 3;
+  static const Duration _showWatchdog = Duration(seconds: 10);
+  static const Duration _rewardGrace = Duration(seconds: 1);
 
   final ValueNotifier<bool> _ready = ValueNotifier<bool>(false);
   RewardedAd? _ad;
@@ -35,33 +37,29 @@ class AdMobRewardedAds implements RewardedAds {
       );
       await consentUpdated.future;
 
-      final formDone = Completer<void>();
-      await ConsentForm.loadAndShowConsentFormIfRequired((_) {
-        if (!formDone.isCompleted) formDone.complete();
-      });
-      await formDone.future;
+      await ConsentForm.loadAndShowConsentFormIfRequired((_) {});
     } catch (_) {
       // Consent failures fall through: a cached consent may still allow ads.
     }
     try {
       if (!await ConsentInformation.instance.canRequestAds()) return;
       await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(maxAdContentRating: MaxAdContentRating.t),
+        RequestConfiguration(maxAdContentRating: AdPolicy.maxContentRating),
       );
       await MobileAds.instance.initialize();
-      _load();
+      await _load();
     } catch (_) {
       _ready.value = false;
     }
   }
 
-  void _load() {
+  Future<void> _load() async {
     final unitId = AdIds.rewarded;
     if (unitId == null) return;
     try {
-      RewardedAd.load(
+      await RewardedAd.load(
         adUnitId: unitId,
-        request: const AdRequest(nonPersonalizedAds: true),
+        request: const AdRequest(nonPersonalizedAds: AdPolicy.nonPersonalizedAds),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (ad) {
             _failedLoads = 0;
@@ -83,7 +81,7 @@ class AdMobRewardedAds implements RewardedAds {
   void _scheduleRetry() {
     if (++_failedLoads > _maxRetries) return;
     _retryTimer?.cancel();
-    _retryTimer = Timer(_retryDelay, _load);
+    _retryTimer = Timer(_retryDelay, () => unawaited(_load()));
   }
 
   @override
@@ -96,20 +94,45 @@ class AdMobRewardedAds implements RewardedAds {
 
     final done = Completer<bool>();
     var rewarded = false;
+    var dismissed = false;
+    Timer? watchdog;
+    Timer? grace;
     void finish() {
       if (done.isCompleted) return;
-      ad.dispose();
+      watchdog?.cancel();
+      grace?.cancel();
+      try {
+        ad.dispose();
+      } catch (_) {}
       _showing = false;
       done.complete(rewarded);
-      _load();
+      unawaited(_load());
     }
 
     ad.fullScreenContentCallback = FullScreenContentCallback<RewardedAd>(
-      onAdDismissedFullScreenContent: (_) => finish(),
+      onAdShowedFullScreenContent: (_) => watchdog?.cancel(),
+      onAdDismissedFullScreenContent: (_) {
+        dismissed = true;
+        if (rewarded) {
+          finish();
+        } else {
+          // The reward event can land just after dismissal.
+          grace = Timer(_rewardGrace, finish);
+        }
+      },
       onAdFailedToShowFullScreenContent: (_, _) => finish(),
     );
     try {
-      await ad.show(onUserEarnedReward: (_, _) => rewarded = true);
+      await ad.show(
+        onUserEarnedReward: (_, _) {
+          rewarded = true;
+          if (dismissed) finish();
+        },
+      );
+      // Native show() can succeed without ever raising an event.
+      if (!done.isCompleted && !dismissed) {
+        watchdog = Timer(_showWatchdog, finish);
+      }
     } catch (_) {
       finish();
     }
