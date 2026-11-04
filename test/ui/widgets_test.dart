@@ -93,4 +93,36 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
     expect(key.currentState!.controller.value, lessThan(0.3));
   });
+
+  test('10-block tower slots stay within the available height', () {
+    for (final withNext in [false, true]) {
+      final scale =
+          TowerLayout.scaleFor(tallTower10, 300, withNextSlot: withNext);
+      final slots = TowerLayout.slots(
+          [for (final b in tallTower10) PlacedBlock(b, 0)], 300, scale);
+      var top = slots.last.base + slots.last.height;
+      if (withNext) top += (TowerLayout.gap + TowerLayout.nextSlotHeight) * scale;
+      expect(top, lessThanOrEqualTo(300.0 + 1e-9), reason: 'next=$withNext');
+    }
+  });
+
+  testWidgets('the floor stays level when the tower leans', (t) async {
+    await t.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 300,
+        height: 400,
+        child: TowerView(
+          placed: [for (final b in smallTower3) PlacedBlock(b, 0)],
+          leanDegrees: 6,
+        ),
+      ),
+    ));
+    expect(
+        find.ancestor(
+            of: find.byKey(const ValueKey('floor')),
+            matching: find.byType(Transform)),
+        findsNothing);
+    expect(find.byType(Transform), findsWidgets); // blocks do lean
+  });
 }

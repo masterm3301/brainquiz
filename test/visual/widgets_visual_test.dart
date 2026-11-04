@@ -1,6 +1,7 @@
 import 'package:brainquiz/game/block.dart';
 import 'package:brainquiz/game/stability.dart';
 import 'package:brainquiz/ui/theme/tokens.dart';
+import 'package:brainquiz/ui/theme/text.dart';
 import 'package:brainquiz/ui/widgets/arena.dart';
 import 'package:brainquiz/ui/widgets/tower_view.dart';
 import 'package:flutter/widgets.dart';
@@ -23,9 +24,10 @@ void main() {
         color: AppColors.background,
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Arena(
+          child: Stack(children: [Arena(
             showCentreLine: true,
             child: TowerView(
+              leanDegrees: 4,
               placed: [
                 PlacedBlock(_b(BlockColor.cyan, BlockShape.rectangle, 0.74, 26), 0),
                 PlacedBlock(_b(BlockColor.green, BlockShape.triangle, 0.82, 40), 0),
@@ -35,6 +37,13 @@ void main() {
               ],
             ),
           ),
+          Positioned(
+            left: 16,
+            top: 14,
+            child: Text('Memorise the tower',
+                style: nunito(22, weight: 900)),
+          ),
+          ]),
         ),
       ),
     ));

@@ -7,32 +7,28 @@ import '../../game/stability.dart';
 import '../theme/tokens.dart';
 import 'block_view.dart';
 
-/// A block's position, measured from the bottom-left of the tower area.
-class TowerSlot {
-  const TowerSlot(this.block, this.rect);
-  final Block block;
-  final Rect rect; // top is measured from the bottom edge: rect.bottom is the gap height above ground
-}
-
 /// Pure layout for the tower, shared by [TowerView] and the collapse.
 abstract final class TowerLayout {
   static const double gap = 5;
   static const double floorHeight = 8;
   static const double floorMargin = 20;
   static const double emptyRowHeight = 40;
+  static const double nextSlotHeight = 40;
 
   /// Height at scale 1: margin, floor, pillar and blocks, with 5px gaps.
-  static double naturalHeight(List<Block> blocks) {
+  static double naturalHeight(List<Block> blocks, {bool withNextSlot = false}) {
     var h = floorMargin + floorHeight + pillar.height + gap;
     for (final b in blocks) {
       h += b.height + gap;
     }
+    if (withNextSlot) h += nextSlotHeight + gap;
     return h;
   }
 
   /// Uniform scale so the tower fits [availableHeight]. Never above 1.
-  static double scaleFor(List<Block> blocks, double availableHeight) {
-    final natural = naturalHeight(blocks);
+  static double scaleFor(List<Block> blocks, double availableHeight,
+      {bool withNextSlot = false}) {
+    final natural = naturalHeight(blocks, withNextSlot: withNextSlot);
     return natural <= availableHeight ? 1 : availableHeight / natural;
   }
 
@@ -73,6 +69,9 @@ class TowerView extends StatelessWidget {
   });
 
   final List<PlacedBlock> placed;
+
+  /// Lean at the top block; rows below lean proportionally less. The sign
+  /// picks the direction (positive leans right). Floor and pillar stay level.
   final double leanDegrees;
   final Widget? nextSlot;
   final int emptyRows;
@@ -83,46 +82,55 @@ class TowerView extends StatelessWidget {
       final blocks = [for (final p in placed) p.block];
       final extra = emptyRows * TowerLayout.emptyRowHeight;
       final avail = c.hasBoundedHeight ? c.maxHeight - extra : double.infinity;
-      final scale = TowerLayout.scaleFor(blocks, avail);
+      final scale = TowerLayout.scaleFor(blocks, avail,
+          withNextSlot: nextSlot != null);
       final width = c.maxWidth;
       final slots = TowerLayout.slots(placed, width, scale);
       final height = c.hasBoundedHeight
           ? c.maxHeight
-          : TowerLayout.naturalHeight(blocks) * scale + extra;
+          : TowerLayout.naturalHeight(blocks, withNextSlot: nextSlot != null) *
+                  scale +
+              extra;
       final top = slots.last.base + slots.last.height + TowerLayout.gap * scale;
+      final n = placed.length;
+
+      double angleOf(int i) =>
+          n == 0 || i == 0 ? 0 : leanDegrees * math.pi / 180 * i / n;
+      double shiftOf(int i) => slots[i].base * math.sin(angleOf(i));
 
       return SizedBox(
         width: width,
         height: height,
-        child: Transform.rotate(
-          angle: leanDegrees * math.pi / 180,
-          alignment: Alignment.bottomCenter,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: width * 0.02,
+              width: width * 0.96,
+              bottom: TowerLayout.floorMargin * scale,
+              height: TowerLayout.floorHeight * scale,
+              child: const _Floor(key: ValueKey('floor')),
+            ),
+            for (var i = 0; i < slots.length; i++)
               Positioned(
-                left: width * 0.02,
-                width: width * 0.96,
-                bottom: TowerLayout.floorMargin * scale,
-                height: TowerLayout.floorHeight * scale,
-                child: const _Floor(),
-              ),
-              for (final s in slots)
-                Positioned(
-                  left: s.left,
-                  bottom: s.base,
+                left: slots[i].left + shiftOf(i),
+                bottom: slots[i].base,
+                child: Transform.rotate(
+                  angle: angleOf(i),
                   child: BlockView(
-                      block: s.block, width: s.width, height: s.height),
+                      block: slots[i].block,
+                      width: slots[i].width,
+                      height: slots[i].height),
                 ),
-              if (nextSlot != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: top,
-                  child: Center(child: nextSlot),
-                ),
-            ],
-          ),
+              ),
+            if (nextSlot != null)
+              Positioned(
+                left: shiftOf(slots.length - 1),
+                right: -shiftOf(slots.length - 1),
+                bottom: top,
+                child: Center(child: nextSlot),
+              ),
+          ],
         ),
       );
     });
@@ -130,14 +138,15 @@ class TowerView extends StatelessWidget {
 }
 
 class _Floor extends StatelessWidget {
-  const _Floor();
+  const _Floor({super.key});
 
   @override
   Widget build(BuildContext context) => const DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.green,
           boxShadow: [
-            BoxShadow(color: Color(0xF222E06B), blurRadius: 30),
+            BoxShadow(color: Color(0xFF22E06B), blurRadius: 30),
+            BoxShadow(color: Color(0x8022E06B), blurRadius: 60),
           ],
         ),
       );
