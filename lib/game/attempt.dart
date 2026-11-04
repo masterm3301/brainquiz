@@ -144,7 +144,8 @@ class Attempt extends ChangeNotifier {
     }
     final total = _level.blocks;
     final correct = total - _report.wrongCount;
-    final held = sim.elapsed.floor();
+    // The small bias absorbs float drift: 160 steps of 0.05 sum to 7.9999...
+    final held = (sim.elapsed + 1e-6).floor();
     final stood = !sim.fallen;
     final paidBraces = (sim.bracesUsed - (_adBraceEarned ? 1 : 0)).clamp(
       0,
