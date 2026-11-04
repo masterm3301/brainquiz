@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../../game/block.dart';
@@ -35,12 +37,29 @@ class BlockTray extends StatefulWidget {
 class _BlockTrayState extends State<BlockTray> {
   int _page = 0;
 
-  static Size tileSize(Block b) =>
-      Size((b.width * 90).clamp(10, 40), (b.height * 0.45).clamp(10, 32));
+  /// The tile being dragged. Every other tile is locked while it is set, so
+  /// a second finger cannot hold a second block.
+  Key? _activeKey;
+
+  /// Stable per block (not per position), counting equal blocks apart.
+  static Key _keyFor(List<Block> blocks, int index) {
+    var n = 0;
+    for (var j = 0; j < index; j++) {
+      if (blocks[j] == blocks[index]) n++;
+    }
+    return ValueKey((blocks[index], n));
+  }
 
   @override
   Widget build(BuildContext context) {
     final blocks = widget.blocks;
+    if (_activeKey != null &&
+        !List.generate(
+          blocks.length,
+          (i) => _keyFor(blocks, i),
+        ).contains(_activeKey)) {
+      _activeKey = null;
+    }
     final paged = blocks.length > trayTilesPerPage;
     const perPage = trayTilesPerPage - 1;
     final pages = paged ? (blocks.length / perPage).ceil() : 1;
@@ -52,10 +71,23 @@ class _BlockTrayState extends State<BlockTray> {
     final tiles = <Widget>[
       for (var i = 0; i < shown.length; i++)
         _Tile(
-          key: ValueKey('tile-${start + i}'),
+          key: _keyFor(blocks, start + i),
           block: shown[i],
-          enabled: widget.enabled,
-          feedbackSize: widget.feedbackSize ?? tileSize,
+          enabled:
+              widget.enabled &&
+              (_activeKey == null || _activeKey == _keyFor(blocks, start + i)),
+          canStart: (k) =>
+              widget.enabled && (_activeKey == null || _activeKey == k),
+          onDragStarted: (k) {
+            // Set at once, not after a rebuild: a second finger can land
+            // before the next frame.
+            _activeKey = k;
+            setState(() {});
+          },
+          onDragEnd: () {
+            if (_activeKey != null) setState(() => _activeKey = null);
+          },
+          feedbackSize: widget.feedbackSize ?? _defaultHeld,
         ),
       if (paged)
         GestureDetector(
@@ -102,38 +134,66 @@ class _Frame extends StatelessWidget {
   );
 }
 
+/// Arena width at which a square block is square (see the generator).
+const double _referenceArenaWidth = 340;
+const double _tallestBlock = 95;
+
+/// One scale for every block, so relative widths and proportions survive:
+/// the widest block (.90) fills [inner]'s width and the tallest fits its
+/// height.
+@visibleForTesting
+Size trayDrawSize(Block b, Size inner) {
+  final k = math.min(
+    inner.width / (0.9 * _referenceArenaWidth),
+    inner.height / _tallestBlock,
+  );
+  return Size(b.width * _referenceArenaWidth * k, b.height * k);
+}
+
 class _Tile extends StatelessWidget {
   const _Tile({
     super.key,
     required this.block,
     required this.enabled,
     required this.feedbackSize,
+    required this.canStart,
+    required this.onDragStarted,
+    required this.onDragEnd,
   });
 
   final Block block;
   final bool enabled;
   final Size Function(Block) feedbackSize;
+  final bool Function(Key?) canStart;
+  final void Function(Key?) onDragStarted;
+  final VoidCallback onDragEnd;
 
   @override
   Widget build(BuildContext context) {
-    final small = _BlockTrayState.tileSize(block);
     final held = feedbackSize(block);
     final tile = _Frame(
       child: Padding(
         padding: const EdgeInsets.all(4),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: BlockView(
-            block: block,
-            width: small.width,
-            height: small.height,
-          ),
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final small = trayDrawSize(block, c.biggest);
+            return Center(
+              child: BlockView(
+                block: block,
+                width: small.width,
+                height: small.height,
+              ),
+            );
+          },
         ),
       ),
     );
     return Draggable<Block>(
       data: block,
       maxSimultaneousDrags: enabled ? 1 : 0,
+      allowedButtonsFilter: (_) => canStart(key),
+      onDragStarted: () => onDragStarted(key),
+      onDragEnd: (_) => onDragEnd(),
       dragAnchorStrategy: (draggable, context, position) =>
           Offset(held.width / 2, held.height / 2),
       feedback: BlockView(
@@ -147,3 +207,7 @@ class _Tile extends StatelessWidget {
     );
   }
 }
+
+/// Held size when the owner gives none: a quarter of the natural size.
+Size _defaultHeld(Block b) =>
+    Size(b.width * _referenceArenaWidth * 0.25, b.height * 0.25);

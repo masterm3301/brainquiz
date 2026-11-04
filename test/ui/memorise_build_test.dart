@@ -3,7 +3,9 @@ import 'package:brainquiz/game/attempt.dart';
 import 'package:brainquiz/game/block.dart';
 import 'package:brainquiz/game/levels.dart';
 import 'package:brainquiz/ui/screens/attempt_flow.dart';
+import 'package:brainquiz/ui/screens/build_view.dart';
 import 'package:brainquiz/ui/widgets/arena.dart';
+import 'package:brainquiz/ui/widgets/block_view.dart';
 import 'package:brainquiz/ui/widgets/block_tray.dart';
 import 'package:brainquiz/ui/widgets/neon_button.dart';
 import 'package:brainquiz/ui/widgets/tower_view.dart';
@@ -37,7 +39,7 @@ Future<void> toBuild(WidgetTester t, {int level = 1, RewardedAds? ads}) async {
 
 /// Drags tray tile [i] to [to] (global).
 Future<void> dragTile(WidgetTester t, int i, Offset to) async {
-  final from = t.getCenter(find.byKey(ValueKey('tile-$i')));
+  final from = t.getCenter(find.byType(Draggable<Block>).at(i));
   final g = await t.startGesture(from);
   for (var s = 1; s <= 10; s++) {
     await g.moveTo(Offset.lerp(from, to, s / 10)!);
@@ -122,10 +124,139 @@ void main() {
 
   testWidgets('only one block can be dragged at a time', (t) async {
     await toBuild(t);
-    for (final d in t.widgetList<Draggable<Block>>(
-      find.byType(Draggable<Block>),
-    )) {
-      expect(d.maxSimultaneousDrags, 1);
+    int held() => t
+        .widgetList<BlockView>(find.byType(BlockView))
+        .where((v) => v.heldWhite)
+        .length;
+    final a = await t.startGesture(
+      t.getCenter(find.byType(Draggable<Block>).at(0)),
+    );
+    final b = await t.startGesture(
+      t.getCenter(find.byType(Draggable<Block>).at(1)),
+    );
+    for (var s = 1; s <= 4; s++) {
+      await a.moveBy(const Offset(0, -20));
+      await t.pump(const Duration(milliseconds: 20));
+    }
+    for (var s = 1; s <= 4; s++) {
+      await b.moveBy(const Offset(0, -20));
+      await t.pump(const Duration(milliseconds: 20));
+    }
+    expect(held(), 1);
+    await a.up();
+    await b.up();
+    await t.pump();
+  });
+
+  testWidgets('the Block N of M header stays on one line at 393 wide', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(393, 852);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await toBuild(t, level: 12);
+    final size = t.getSize(find.text('Block 1 of 10'));
+    expect(size.height, lessThan(32));
+  });
+
+  Future<(Attempt, double)> pumpBuild(WidgetTester t, int level) async {
+    final a = reference(level)..finishStudy();
+    await pumpApp(t, home: BuildView(attempt: a));
+    await t.pump();
+    await t.pump();
+    return (a, t.getSize(find.byType(TowerView)).width);
+  }
+
+  testWidgets('the drop x matches an off-centre finger, and snaps to the '
+      'centre inside the tolerance', (t) async {
+    final (a, inner) = await pumpBuild(t, 1);
+    final ref = reference(1)..finishStudy();
+    final block = ref.tower.blocks[0];
+    await dragTile(
+      t,
+      ref.tray.indexOf(block),
+      arenaCentre(t) + Offset(0.12 * inner, 0),
+    );
+    expect(a.placed.single.x, closeTo(0.12, 1e-3));
+
+    final (b, inner2) = await pumpBuild(t, 1);
+    await dragTile(
+      t,
+      ref.tray.indexOf(block),
+      arenaCentre(t) + Offset(0.02 * inner2, 0),
+    );
+    expect(b.placed.single.x, 0);
+  });
+
+  testWidgets('the drop x is still right on a scaled-down tower', (t) async {
+    t.view.physicalSize = const Size(320, 568);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final (a, inner) = await pumpBuild(t, 12);
+    final ref = reference(12)..finishStudy();
+    for (var row = 0; row < 3; row++) {
+      await placeRight(t, ref, row);
+      ref.tray; // mirrored by placeRight
+    }
+    // placeRight dropped on `ref`, not `a`; mirror the screen's attempt.
+    expect(a.placed.length, 3);
+    expect(
+      t.getSize(find.byKey(const ValueKey('place-here'))).height,
+      lessThan(40),
+    );
+    final next = ref.tower.blocks[3];
+    await dragTile(
+      t,
+      ref.tray.indexOf(next),
+      arenaCentre(t) + Offset(0.1 * inner, 0),
+    );
+    expect(a.placed.length, 4);
+    expect(a.placed.last.x, closeTo(0.1, 1e-3));
+  });
+
+  testWidgets('tile sizes keep each block\'s width and proportions', (t) async {
+    Block rect(double w) => Block(
+      color: BlockColor.green,
+      shape: BlockShape.rectangle,
+      width: w,
+      height: 34,
+    );
+    final square = Block(
+      color: BlockColor.cyan,
+      shape: BlockShape.square,
+      width: .22,
+      height: .22 * 340,
+    );
+    final blocks = [rect(.30), rect(.54), rect(.66), rect(.90), square];
+    for (final aspect in [1.0, 2.6]) {
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 356,
+                child: BlockTray(blocks: blocks, tileAspect: aspect),
+              ),
+            ),
+          ),
+        ),
+      );
+      final sizes = [
+        for (final b in blocks)
+          t.getSize(
+            find
+                .descendant(
+                  of: find.byType(Draggable<Block>).at(blocks.indexOf(b)),
+                  matching: find.byType(CustomPaint),
+                )
+                .first,
+          ),
+      ];
+      for (var i = 1; i < 4; i++) {
+        expect(sizes[i].width, greaterThan(sizes[i - 1].width + 3));
+      }
+      expect(sizes[3].width / sizes[0].width, closeTo(3, .05));
+      expect(sizes[4].width, closeTo(sizes[4].height, .01));
     }
   });
 
@@ -203,6 +334,11 @@ void main() {
     await t.pump();
     await t.pump();
     expect(find.byKey(const ValueKey('peek-tower')), findsOneWidget);
+    // Dragging is off during the peek, and the meter does not move.
+    await dragTile(t, 0, arenaCentre(t));
+    expect(find.text('Block 2 of 3'), findsOneWidget);
+    expect(find.byType(Draggable<Block>), findsNWidgets(2));
+    expect(find.text('100%'), findsOneWidget);
     await t.pump(const Duration(seconds: 2));
     expect(find.byKey(const ValueKey('peek-tower')), findsOneWidget);
     await t.pump(const Duration(seconds: 2));

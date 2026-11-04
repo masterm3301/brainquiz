@@ -61,6 +61,7 @@ class _BuildViewState extends State<BuildView> {
   Size _heldSize(Block b) => Size(b.width * _innerWidth, b.height * _scale);
 
   void _onDrop(DragTargetDetails<Block> d) {
+    if (_peeking || _adShowing) return;
     final box = _towerKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
     final held = _heldSize(d.data);
@@ -114,7 +115,7 @@ class _BuildViewState extends State<BuildView> {
                     children: [
                       const BackLabel(),
                       const SizedBox(width: 14),
-                      Flexible(
+                      Expanded(
                         child: Text(
                           full
                               ? 'All $total placed'
@@ -122,7 +123,6 @@ class _BuildViewState extends State<BuildView> {
                           style: nunito(20, weight: 900),
                         ),
                       ),
-                      const Spacer(),
                       const SizedBox(width: 12),
                       Text('No timer', style: label(size: 13)),
                     ],

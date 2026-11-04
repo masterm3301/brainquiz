@@ -1,4 +1,5 @@
 import 'package:brainquiz/game/attempt.dart';
+import 'package:brainquiz/game/block.dart';
 import 'package:brainquiz/game/levels.dart';
 import 'package:brainquiz/ui/screens/attempt_flow.dart';
 import 'package:brainquiz/ui/widgets/arena.dart';
@@ -37,7 +38,7 @@ void main() {
     for (var row = 0; row < 4; row++) {
       final block = ref.tower.blocks[row];
       final from = t.getCenter(
-        find.byKey(ValueKey('tile-${ref.tray.indexOf(block)}')),
+        find.byType(Draggable<Block>).at(ref.tray.indexOf(block)),
       );
       final to = t.getCenter(find.byType(Arena));
       final g = await t.startGesture(from);
