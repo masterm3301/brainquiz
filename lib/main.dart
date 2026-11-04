@@ -2,7 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'ads/admob_rewarded_ads.dart';
+import 'ads/rewarded_ads.dart';
 import 'app.dart';
+import 'progress/progress_controller.dart';
+import 'progress/progress_store.dart';
+import 'ui/app_scope.dart';
+import 'ui/screens/menu_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,5 +22,20 @@ Future<void> main() async {
     statusBarIconBrightness: Brightness.light,
     statusBarBrightness: Brightness.dark,
   ));
-  runApp(const TowerBuildApp(home: SizedBox()));
+
+  final progress = ProgressController(SharedPrefsProgressStore());
+  await progress.load();
+
+  final onMobile = defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+  final RewardedAds ads = onMobile ? AdMobRewardedAds() : NoAds();
+  // Deliberately not awaited: ads must never delay startup.
+  ads.initialize();
+
+  runApp(AppScope(
+    progress: progress,
+    ads: ads,
+    newSeed: () => DateTime.now().microsecondsSinceEpoch,
+    child: const TowerBuildApp(home: MenuScreen()),
+  ));
 }
