@@ -1,25 +1,45 @@
 import 'package:brainquiz/game/levels.dart';
 import 'package:brainquiz/progress/progress.dart';
+import 'package:brainquiz/progress/progress_store.dart';
 import 'package:brainquiz/ui/app_scope.dart';
 import 'package:brainquiz/ui/screens/menu_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_ads.dart';
 import '../support/flow_helpers.dart';
 import '../support/pump_app.dart';
 
-Future<void> playLevelOneFromMenu(WidgetTester t) async {
+bool _noAdText() => find
+    .textContaining(RegExp(r'\bad\b', caseSensitive: false))
+    .evaluate()
+    .isEmpty;
+
+/// Plays level 1 from the menu to the stood screen. With [noAdText] set,
+/// asserts that no ad text shows at any step.
+Future<void> playLevelOneFromMenu(WidgetTester t, {bool noAdText = false}) async {
+  void checkAds() {
+    if (noAdText) expect(_noAdText(), isTrue);
+  }
+
+  checkAds();
   await t.tap(find.text('Play'));
   await t.pumpAndSettle(const Duration(milliseconds: 50));
+  checkAds();
   await pumpSeconds(t, levels[0].studySeconds);
+  checkAds();
   final ref = reference(1)..finishStudy();
   for (var row = 0; row < levels[0].blocks; row++) {
     await placeRight(t, ref, row);
   }
+  checkAds();
   await tapLock(t);
+  expect(find.text('It has to stand'), findsOneWidget);
+  checkAds();
   await pumpSeconds(t, levels[0].holdSeconds + 1);
   expect(find.text('Your tower stood'), findsOneWidget);
+  checkAds();
 }
 
 void main() {
@@ -27,9 +47,8 @@ void main() {
     'new player clears level 1, closes the app, and continues on level 2',
     (t) async {
       phone(t);
-      final store = MemoryProgressStore(Progress.empty);
-      final ads = FakeAds(); // never ready
-      await pumpApp(t, store: store, ads: ads);
+      SharedPreferences.setMockInitialValues({});
+      await pumpApp(t, store: SharedPrefsProgressStore(), ads: FakeAds());
       expect(find.text('Play'), findsOneWidget);
 
       await playLevelOneFromMenu(t);
@@ -45,37 +64,18 @@ void main() {
       expect(find.text('Continue level 2'), findsOneWidget);
       expect(find.text(formatPoints(total)), findsOneWidget);
 
-      // "Close the app": a new controller over the same saved store.
+      // "Close the app": a new controller and store over the same saved data.
       await t.pumpWidget(const SizedBox());
-      await pumpApp(t, store: store, ads: FakeAds());
+      await pumpApp(t, store: SharedPrefsProgressStore(), ads: FakeAds());
       expect(find.text('Continue level 2'), findsOneWidget);
       expect(find.text(formatPoints(total)), findsOneWidget);
     },
   );
 
-  testWidgets('the game plays start to finish with ads unavailable', (t) async {
+  testWidgets('the game plays start to finish with no ads available', (t) async {
     phone(t);
-    await pumpApp(t);
-    bool noAdText() =>
-        find.textContaining(RegExp(r'\bad\b', caseSensitive: false))
-            .evaluate()
-            .isEmpty;
-    expect(noAdText(), isTrue);
-    await t.tap(find.text('Play'));
-    await t.pumpAndSettle(const Duration(milliseconds: 50));
-    expect(noAdText(), isTrue);
-    await pumpSeconds(t, levels[0].studySeconds);
-    expect(noAdText(), isTrue);
-    final ref = reference(1)..finishStudy();
-    for (var row = 0; row < levels[0].blocks; row++) {
-      await placeRight(t, ref, row);
-    }
-    expect(noAdText(), isTrue);
-    await tapLock(t);
-    expect(find.text('It has to stand'), findsOneWidget);
-    expect(noAdText(), isTrue);
-    await pumpSeconds(t, levels[0].holdSeconds + 1);
-    expect(find.text('Your tower stood'), findsOneWidget);
-    expect(noAdText(), isTrue);
+    SharedPreferences.setMockInitialValues({});
+    await pumpApp(t, store: SharedPrefsProgressStore());
+    await playLevelOneFromMenu(t, noAdText: true);
   });
 }

@@ -3,7 +3,8 @@
 A dark, neon, 2D memory game for Android and iOS. A tower of coloured blocks
 is shown for a few seconds. Rebuild it from memory by dragging blocks from the
 tray, lock it, and see whether it stands against the wind. Rewarded ads are the
-only ads: one optional extra brace, offered before the wind starts.
+only ads, and both are optional: "See the tower again" on the build screen
+replays the tower, and an extra brace is offered before the wind starts.
 
 Portrait only, dark only, no sound, no accounts, no backend. Progress is saved
 on the device.
@@ -38,7 +39,11 @@ All ad IDs are Google's test IDs. They live in `lib/ads/ad_ids.dart`, the
 Android manifest (`android/app/src/main/AndroidManifest.xml`), and
 `ios/Runner/Info.plist`. Change these before release:
 
-- The app ID: `com.example.brainquiz` is a placeholder on both platforms.
+- The app ID: `com.example.brainquiz` is a placeholder. It lives in
+  `applicationId` and `namespace` in `android/app/build.gradle.kts`, and as the
+  bundle ID in the Xcode project.
+- Signing: the Android release build is signed with the debug keys. Set up a
+  real release signing config before publishing.
 - Replace every test ad ID with real ones, in all three places above.
 - Recheck Google's and Apple's current rules for teen players (ad content
   rating, consent, and data handling), including whether Apple's App Tracking
