@@ -11,6 +11,14 @@ void main() {
     expect(await ads.show(), isFalse);
   });
 
+  test('NoAds never requires privacy options, and showing them is safe',
+      () async {
+    final ads = NoAds();
+    expect(ads.privacyOptionsRequired.value, isFalse);
+    await ads.showPrivacyOptions();
+    expect(ads.privacyOptionsRequired.value, isFalse);
+  });
+
   test('FakeAds completes with the given outcome', () async {
     final ads = FakeAds()..ready = true;
     expect(ads.isReady.value, isTrue);

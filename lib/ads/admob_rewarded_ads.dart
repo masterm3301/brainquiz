@@ -15,14 +15,30 @@ class AdMobRewardedAds implements RewardedAds {
   static const Duration _rewardGrace = Duration(seconds: 1);
 
   final ValueNotifier<bool> _ready = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _privacyRequired = ValueNotifier<bool>(false);
   RewardedAd? _ad;
   bool _showing = false;
   bool _initialized = false;
+  bool _adsStarted = false;
   int _failedLoads = 0;
   Timer? _retryTimer;
 
   @override
   ValueListenable<bool> get isReady => _ready;
+
+  @override
+  ValueListenable<bool> get privacyOptionsRequired => _privacyRequired;
+
+  @override
+  Future<void> showPrivacyOptions() async {
+    try {
+      await ConsentForm.showPrivacyOptionsForm((_) {});
+    } catch (_) {
+      // A form that cannot show leaves everything as it was.
+    }
+    await _refreshPrivacyOptions();
+    await _startAdsIfAllowed();
+  }
 
   @override
   Future<void> initialize() async {
@@ -41,8 +57,28 @@ class AdMobRewardedAds implements RewardedAds {
     } catch (_) {
       // Consent failures fall through: a cached consent may still allow ads.
     }
+    await _refreshPrivacyOptions();
+    await _startAdsIfAllowed();
+  }
+
+  Future<void> _refreshPrivacyOptions() async {
+    try {
+      final status = await ConsentInformation.instance
+          .getPrivacyOptionsRequirementStatus();
+      _privacyRequired.value =
+          status == PrivacyOptionsRequirementStatus.required;
+    } catch (_) {
+      // Keep the last known answer.
+    }
+  }
+
+  /// Runs at launch and again after the privacy form, which may have just
+  /// allowed ads for the first time. Starts ads at most once.
+  Future<void> _startAdsIfAllowed() async {
+    if (_adsStarted) return;
     try {
       if (!await ConsentInformation.instance.canRequestAds()) return;
+      _adsStarted = true;
       await MobileAds.instance.updateRequestConfiguration(
         RequestConfiguration(maxAdContentRating: AdPolicy.maxContentRating),
       );

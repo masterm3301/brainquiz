@@ -8,13 +8,23 @@ import 'package:flutter/foundation.dart';
 class FakeAds implements RewardedAds {
   final ValueNotifier<bool> _ready = ValueNotifier<bool>(false);
   Completer<bool>? _pending;
+  final ValueNotifier<bool> _privacyRequired = ValueNotifier<bool>(false);
   int showCount = 0;
+  int privacyShowCount = 0;
 
   bool get ready => _ready.value;
   set ready(bool value) => _ready.value = value;
 
+  set privacyRequired(bool value) => _privacyRequired.value = value;
+
   @override
   ValueListenable<bool> get isReady => _ready;
+
+  @override
+  ValueListenable<bool> get privacyOptionsRequired => _privacyRequired;
+
+  @override
+  Future<void> showPrivacyOptions() async => privacyShowCount++;
 
   @override
   Future<void> initialize() async {}

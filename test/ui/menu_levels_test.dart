@@ -5,6 +5,7 @@ import 'package:brainquiz/ui/screens/menu_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fake_ads.dart';
 import '../support/pump_app.dart';
 
 Progress cleared(int n) => Progress({
@@ -33,6 +34,41 @@ void main() {
     await pumpApp(t, progress: cleared(12));
     expect(find.text('Replay level 12'), findsOneWidget);
     expect(find.textContaining('Continue'), findsNothing);
+  });
+
+  group('Privacy options entry', () {
+    testWidgets('hidden when not required', (t) async {
+      await pumpApp(t, ads: FakeAds());
+      expect(find.text('Privacy options'), findsNothing);
+    });
+
+    testWidgets('shown when required, and opens the form', (t) async {
+      final ads = FakeAds()..privacyRequired = true;
+      await pumpApp(t, ads: ads);
+      expect(find.text('Privacy options'), findsOneWidget);
+      await t.tap(find.text('Privacy options'));
+      await t.pump();
+      expect(ads.privacyShowCount, 1);
+    });
+
+    testWidgets('appears when the requirement arrives after launch', (t) async {
+      final ads = FakeAds();
+      await pumpApp(t, ads: ads);
+      ads.privacyRequired = true;
+      await t.pump();
+      expect(find.text('Privacy options'), findsOneWidget);
+    });
+
+    testWidgets('fits a small phone without pushing the buttons off', (t) async {
+      const size = Size(360, 640);
+      t.view.physicalSize = size;
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      await pumpApp(t, ads: FakeAds()..privacyRequired = true);
+      expect(t.getRect(find.text('Privacy options')).bottom,
+          lessThanOrEqualTo(size.height));
+      expect(t.takeException(), isNull);
+    });
   });
 
   testWidgets('Play opens level 1', (t) async {

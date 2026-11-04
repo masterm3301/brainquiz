@@ -36,13 +36,19 @@ class MenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = AppScope.of(context).progress;
+    final scope = AppScope.of(context);
+    final controller = scope.progress;
+    final ads = scope.ads;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: controller,
+          listenable: Listenable.merge([
+            controller,
+            ads.privacyOptionsRequired,
+          ]),
           builder: (context, _) {
+            final showPrivacy = ads.privacyOptionsRequired.value;
             final progress = controller.progress;
             final next = progress.nextLevel;
             final buttonLabel = !progress.hasPlayed
@@ -51,7 +57,9 @@ class MenuScreen extends StatelessWidget {
                     ? 'Replay level $next'
                     : 'Continue level $next';
             return LayoutBuilder(builder: (context, c) {
-              final arenaHeight = (c.maxHeight - 340).clamp(160.0, 520.0);
+              final reserved = showPrivacy ? 384 : 340;
+              final arenaHeight =
+                  (c.maxHeight - reserved).clamp(160.0, 520.0);
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 child: ConstrainedBox(
@@ -108,19 +116,15 @@ class MenuScreen extends StatelessWidget {
                                     builder: (_) => const LevelsScreen())),
                           ),
                           const SizedBox(height: 6),
-                          Center(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => showHowToPlay(context),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Text('How to play',
-                                    style: nunito(15,
-                                        weight: 800,
-                                        color: AppColors.textTertiary)),
-                              ),
-                            ),
+                          _PlainEntry(
+                            'How to play',
+                            onTap: () => showHowToPlay(context),
                           ),
+                          if (showPrivacy)
+                            _PlainEntry(
+                              'Privacy options',
+                              onTap: ads.showPrivacyOptions,
+                            ),
                         ],
                       ),
                     ],
@@ -133,4 +137,27 @@ class MenuScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A quiet text link under the menu buttons.
+class _PlainEntry extends StatelessWidget {
+  const _PlainEntry(this.text, {required this.onTap});
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          text,
+          style: nunito(15, weight: 800, color: AppColors.textTertiary),
+        ),
+      ),
+    ),
+  );
 }
