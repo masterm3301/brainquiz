@@ -4,22 +4,21 @@ import 'package:brainquiz/game/stability.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Block blockOf(BlockColor color, double width, double height) => Block(
-  color: color,
-  shape: BlockShape.rectangle,
-  width: width,
-  height: height,
-);
+      color: color,
+      shape: BlockShape.rectangle,
+      width: width,
+      height: height,
+    );
 
 Block recolour(Block b) => Block(
-  color: b.color == BlockColor.red ? BlockColor.cyan : BlockColor.red,
-  shape: b.shape,
-  width: b.width,
-  height: b.height,
-);
+      color: b.color == BlockColor.red ? BlockColor.cyan : BlockColor.red,
+      shape: b.shape,
+      width: b.width,
+      height: b.height,
+    );
 
-List<PlacedBlock> straight(Iterable<Block> blocks) => [
-  for (final b in blocks) PlacedBlock(b, 0),
-];
+List<PlacedBlock> straight(Iterable<Block> blocks) =>
+    [for (final b in blocks) PlacedBlock(b, 0)];
 
 final target = [
   blockOf(BlockColor.green, 0.9, 44),
@@ -30,28 +29,22 @@ final level3 = levels[2];
 final level2 = levels[1];
 
 StabilityReport reportWithScore(int score) => StabilityReport(
-  score: score,
-  mustFall: false,
-  wrongRows: const [],
-  crooked: const [],
-  topHeavy: false,
-  meterLine: meterLineFor(score),
-);
+      score: score,
+      mustFall: false,
+      wrongRows: const [],
+      crooked: const [],
+      topHeavy: false,
+      meterLine: meterLineFor(score),
+    );
 
-final perfectReport = assessStability(
-  target: target,
-  placed: straight(target),
-  level: level3,
-);
+final perfectReport =
+    assessStability(target: target, placed: straight(target), level: level3);
 
 void main() {
   test('a straight perfect copy scores 100 at every prefix', () {
     for (var n = 0; n <= target.length; n++) {
       final r = assessStability(
-        target: target,
-        placed: straight(target.take(n)),
-        level: level3,
-      );
+          target: target, placed: straight(target.take(n)), level: level3);
       expect(r.score, 100);
       expect(r.mustFall, isFalse);
     }
@@ -64,27 +57,22 @@ void main() {
   });
   test('wrong colour alone is a wrong block', () {
     final r = assessStability(
-      target: target,
-      placed: straight([recolour(target[0]), target[1], target[2]]),
-      level: level3,
-    );
+        target: target,
+        placed: straight([recolour(target[0]), target[1], target[2]]),
+        level: level3);
     expect(r.wrongRows, [1]);
     expect(r.score, 78);
     expect(r.mustFall, isFalse);
   });
   test('two wrong blocks must fall from level 3, not on level 2', () {
-    final placed = straight([
-      recolour(target[0]),
-      recolour(target[1]),
-      target[2],
-    ]);
-    final l3 = assessStability(target: target, placed: placed, level: level3);
+    final placed =
+        straight([recolour(target[0]), recolour(target[1]), target[2]]);
+    final l3 =
+        assessStability(target: target, placed: placed, level: level3);
     expect(l3.mustFall, isTrue);
     expect(l3.score, lessThanOrEqualTo(35));
-    expect(
-      assessStability(target: target, placed: placed, level: level2).mustFall,
-      isFalse,
-    );
+    expect(assessStability(target: target, placed: placed, level: level2)
+        .mustFall, isFalse);
   });
   test('a crooked drop lowers the score and records row and side', () {
     final placed = [
@@ -100,10 +88,7 @@ void main() {
   });
   test('wide block too high is top heavy', () {
     final r = assessStability(
-      target: target,
-      placed: straight(target.reversed),
-      level: level3,
-    );
+        target: target, placed: straight(target.reversed), level: level3);
     expect(r.topHeavy, isTrue);
   });
   test('touchesBelow needs real overlap', () {
@@ -113,10 +98,8 @@ void main() {
   });
   test('meter line follows the score', () {
     expect(perfectReport.meterLine, 'Centre of mass still over the pillar.');
-    expect(
-      reportWithScore(55).meterLine,
-      'Getting shaky. Centre of mass is drifting.',
-    );
+    expect(reportWithScore(55).meterLine,
+        'Getting shaky. Centre of mass is drifting.');
     expect(reportWithScore(20).meterLine, 'Too unstable to last in the wind.');
   });
 }
