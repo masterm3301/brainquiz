@@ -33,6 +33,11 @@ class TowerBuildApp extends StatelessWidget {
         splashFactory: NoSplash.splashFactory,
         highlightColor: AppColors.transparent,
       ),
+      // Larger system text would squeeze the Build arena down to nothing.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: child!,
+      ),
       home: home,
     );
   }

@@ -390,4 +390,26 @@ void main() {
     }
     expect(t.takeException(), isNull);
   });
+
+  group('system text scale 2.0 at 320x568, level 12', () {
+    for (final adReady in [false, true]) {
+      testWidgets('Build stays playable, ad ready: $adReady', (t) async {
+        const size = Size(320, 568);
+        t.view.physicalSize = size;
+        t.view.devicePixelRatio = 1;
+        t.platformDispatcher.textScaleFactorTestValue = 2.0;
+        addTearDown(t.view.reset);
+        addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
+        await toBuild(t, level: 12, ads: FakeAds()..ready = adReady);
+        expect(find.text('Block 1 of 10'), findsOneWidget);
+        expect(t.getSize(find.byType(Arena)).height, greaterThan(0));
+        final lock = t.getRect(
+          find.widgetWithText(NeonButton, adReady ? 'Lock' : 'Lock the tower'),
+        );
+        expect(lock.top, greaterThanOrEqualTo(0));
+        expect(lock.bottom, lessThanOrEqualTo(size.height));
+        expect(t.takeException(), isNull);
+      });
+    }
+  });
 }
