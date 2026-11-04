@@ -26,6 +26,7 @@ void main() {
     ads.complete(true);
     expect(await second, isTrue);
   });
+
   test('FakeAds show returns false at once when not ready', () async {
     final ads = FakeAds();
     expect(await ads.show(), isFalse);

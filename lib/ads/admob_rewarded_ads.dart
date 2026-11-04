@@ -59,7 +59,9 @@ class AdMobRewardedAds implements RewardedAds {
     try {
       await RewardedAd.load(
         adUnitId: unitId,
-        request: const AdRequest(nonPersonalizedAds: AdPolicy.nonPersonalizedAds),
+        request: const AdRequest(
+          nonPersonalizedAds: AdPolicy.nonPersonalizedAds,
+        ),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (ad) {
             _failedLoads = 0;
@@ -95,6 +97,7 @@ class AdMobRewardedAds implements RewardedAds {
     final done = Completer<bool>();
     var rewarded = false;
     var dismissed = false;
+    var showed = false;
     Timer? watchdog;
     Timer? grace;
     void finish() {
@@ -110,7 +113,10 @@ class AdMobRewardedAds implements RewardedAds {
     }
 
     ad.fullScreenContentCallback = FullScreenContentCallback<RewardedAd>(
-      onAdShowedFullScreenContent: (_) => watchdog?.cancel(),
+      onAdShowedFullScreenContent: (_) {
+        showed = true;
+        watchdog?.cancel();
+      },
       onAdDismissedFullScreenContent: (_) {
         dismissed = true;
         if (rewarded) {
@@ -130,7 +136,7 @@ class AdMobRewardedAds implements RewardedAds {
         },
       );
       // Native show() can succeed without ever raising an event.
-      if (!done.isCompleted && !dismissed) {
+      if (!done.isCompleted && !showed && !dismissed) {
         watchdog = Timer(_showWatchdog, finish);
       }
     } catch (_) {
