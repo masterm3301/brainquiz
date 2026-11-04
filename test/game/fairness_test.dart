@@ -33,32 +33,47 @@ List<PlacedBlock> straight(List<Block> blocks) => [
   for (final b in blocks) PlacedBlock(b, 0),
 ];
 
-/// Runs a hold, spending braces per [plan]: a list of (gust number, offset s).
-bool fallsWithPlan(
+enum BracePlan { never, reactive, spaced }
+
+const _reactiveLean = 9.0;
+
+/// Runs a whole hold with two braces available, spent per [plan]:
+/// never; reactive (whenever |lean| first exceeds 9 degrees, and again the
+/// next time it exceeds 9 after dropping back); or spaced (start of gust 1,
+/// then 2 seconds later).
+HoldSimulation holdWithPlan(
   LevelConfig level,
   StabilityReport report,
   int seed,
-  List<int> braceGusts,
+  BracePlan plan,
 ) {
   final s = sim(
     level,
     report.score,
     seed,
     mustFall: report.mustFall,
-    braces: braceGusts.length,
+    braces: plan == BracePlan.never ? 0 : 2,
   );
-  final gusts = scheduleGusts(level, Random(seed));
-  final pending = [for (final g in braceGusts) gusts[g].start];
+  final firstGust = scheduleGusts(level, Random(seed)).first.start;
+  var armed = true;
   while (!s.fallen && !s.finished) {
     s.step(1 / 60);
-    for (var i = pending.length - 1; i >= 0; i--) {
-      if (s.elapsed >= pending[i]) {
+    if (plan == BracePlan.reactive) {
+      if (s.leanDegrees.abs() <= _reactiveLean) {
+        armed = true;
+      } else if (armed && !s.fallen) {
         s.brace();
-        pending.removeAt(i);
+        armed = false;
+      }
+    } else if (plan == BracePlan.spaced) {
+      if (s.bracesUsed == 0 && s.elapsed >= firstGust) {
+        s.brace();
+      } else if (s.bracesUsed == 1 && s.elapsed >= firstGust + 2) {
+        s.brace();
       }
     }
   }
-  return s.fallen;
+  return s;
 }
 
 void main() {
@@ -111,13 +126,6 @@ void main() {
 
   test('from level 3, two wrong blocks always fall, with any brace timing', () {
     for (final level in levels.where((l) => l.wrongLimitApplies)) {
-      final last = level.gusts - 1;
-      final plans = <List<int>>[
-        [],
-        [0, 0],
-        [last, last],
-        [level.gusts - 2, last],
-      ];
       for (var seed = 0; seed < seeds; seed++) {
         final t = generateTower(level, seed);
         // Swap two rows for decoys so exactly two rows are wrong.
@@ -134,14 +142,19 @@ void main() {
           level: level,
         );
         expect(r.mustFall, isTrue);
-        for (final plan in plans) {
-          expect(
-            fallsWithPlan(level, r, seed, plan),
-            isTrue,
-            reason:
-                'level ${level.number} seed $seed braces at gusts $plan '
-                'score ${r.score}',
-          );
+        for (final plan in BracePlan.values) {
+          final s = holdWithPlan(level, r, seed, plan);
+          final reason =
+              'level ${level.number} seed $seed plan $plan score ${r.score}';
+          expect(s.fallen, isTrue, reason: reason);
+          if (plan == BracePlan.reactive) {
+            expect(s.bracesUsed, 2, reason: 'both braces spent: $reason');
+          }
+          if (plan == BracePlan.spaced) {
+            // A must-fall tower topples inside the 2s gap in every run, so
+            // the second brace is never reached; the first is always spent.
+            expect(s.bracesUsed, greaterThanOrEqualTo(1), reason: reason);
+          }
         }
       }
     }
@@ -153,19 +166,13 @@ void main() {
       for (var seed = 0; seed < seeds; seed++) {
         final t = generateTower(level, seed);
         final rng = Random(seed + 7777);
-        final picks = [
-          for (var i = 0; i < level.blocks; i++)
-            t.tray[rng.nextInt(t.tray.length)],
-        ];
+        final picks = ([...t.tray]..shuffle(rng)).take(level.blocks).toList();
         final r = assessStability(
           target: t.blocks,
           placed: straight(picks),
           level: level,
         );
-        if (!fallsWithPlan(level, r, seed, [
-          level.gusts - 1,
-          level.gusts - 1,
-        ])) {
+        if (!holdWithPlan(level, r, seed, BracePlan.reactive).fallen) {
           cleared++;
         }
       }
