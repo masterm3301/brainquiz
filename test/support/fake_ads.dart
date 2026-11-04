@@ -1,0 +1,35 @@
+import 'dart:async';
+
+import 'package:brainquiz/ads/rewarded_ads.dart';
+import 'package:flutter/foundation.dart';
+
+/// Test double: settable ready flag, counts show() calls, and completes
+/// each show() on demand via [complete].
+class FakeAds implements RewardedAds {
+  final ValueNotifier<bool> _ready = ValueNotifier<bool>(false);
+  Completer<bool>? _pending;
+  int showCount = 0;
+
+  bool get ready => _ready.value;
+  set ready(bool value) => _ready.value = value;
+
+  @override
+  ValueListenable<bool> get isReady => _ready;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> show() {
+    showCount++;
+    final pending = Completer<bool>();
+    _pending = pending;
+    return pending.future;
+  }
+
+  /// Completes the in-progress show() with [rewarded].
+  void complete(bool rewarded) {
+    _pending?.complete(rewarded);
+    _pending = null;
+  }
+}
