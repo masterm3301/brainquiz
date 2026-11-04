@@ -38,12 +38,12 @@ final List<LevelConfig> levels = [
   _l(4, 6, 6, 18, 3, 4, 3, _withTriangle),
   _l(5, 7, 6, 22, 3, 4, 3, _allShapes),
   _l(6, 7, 5, 24, 3, 4, 3, _allShapes),
-  _l(7, 8, 5, 26, 3, 5, 4, _allShapes),
-  _l(8, 8, 5, 28, 4, 5, 4, _allShapes),
-  _l(9, 9, 4, 30, 4, 6, 4, _allShapes),
-  _l(10, 9, 4, 32, 4, 6, 4, _allShapes),
-  _l(11, 10, 4, 35, 5, 7, 4, _allShapes),
-  _l(12, 10, 3, 40, 5, 7, 4, _allShapes),
+  _l(7, 8, 5, 26, 3, 5, 3, _allShapes),
+  _l(8, 8, 5, 28, 4, 5, 3, _allShapes),
+  _l(9, 9, 4, 30, 4, 6, 3, _allShapes),
+  _l(10, 9, 4, 32, 4, 6, 3, _allShapes),
+  _l(11, 10, 4, 35, 5, 7, 3, _allShapes),
+  _l(12, 10, 3, 40, 5, 7, 3, _allShapes),
 ];
 
 LevelConfig _l(

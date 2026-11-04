@@ -35,5 +35,8 @@ void main() {
     expect(levels[4].shapes, contains(BlockShape.invertedTriangle));
     expect(levels[1].colorCount, 2);
     expect(levels[2].colorCount, 3);
+    for (final l in levels) {
+      expect(l.colorCount, inInclusiveRange(2, 3));
+    }
   });
 }
