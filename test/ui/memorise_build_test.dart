@@ -335,12 +335,51 @@ void main() {
     expect(find.text('Block 2 of 3'), findsOneWidget);
     expect(find.byType(Draggable<Block>), findsNWidgets(2));
     expect(find.text('100%'), findsOneWidget);
-    await t.pump(const Duration(seconds: 2));
+    await pumpFor(t, 2);
     expect(find.byKey(const ValueKey('peek-tower')), findsOneWidget);
-    await t.pump(const Duration(seconds: 2));
+    await pumpFor(t, 2);
     expect(find.byKey(const ValueKey('peek-tower')), findsNothing);
     expect(find.text('Block 2 of 3'), findsOneWidget);
     expect(find.byType(Draggable<Block>), findsNWidgets(2));
+  });
+
+  testWidgets('second look: time in the background does not use it up', (
+    t,
+  ) async {
+    final ads = FakeAds()..ready = true;
+    await toBuild(t, ads: ads);
+    await t.tap(find.text('See the tower again'));
+    await t.pump();
+    ads.complete(true);
+    await t.pump();
+    await t.pump();
+    await pumpFor(t, 1);
+    const peek = ValueKey('peek-tower');
+    expect(find.byKey(peek), findsOneWidget);
+
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await t.pump(const Duration(seconds: 30));
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pump();
+    expect(find.byKey(peek), findsOneWidget);
+
+    await pumpFor(t, 1.5);
+    expect(find.byKey(peek), findsOneWidget);
+    await pumpFor(t, 1);
+    expect(find.byKey(peek), findsNothing);
+  });
+
+  testWidgets('second look: leaving mid-look cleans up', (t) async {
+    final ads = FakeAds()..ready = true;
+    await toBuild(t, ads: ads);
+    await t.tap(find.text('See the tower again'));
+    await t.pump();
+    ads.complete(true);
+    await t.pump();
+    await t.pump();
+    expect(find.byKey(const ValueKey('peek-tower')), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('second look: closed early gives nothing and may be retried', (
@@ -377,7 +416,8 @@ void main() {
     await t.tap(find.text('See the tower again'));
     await t.pump();
     ads.complete(true);
-    await t.pump(const Duration(seconds: 4));
+    await t.pump();
+    await pumpFor(t, 4);
     ads.ready = true;
     await t.pump();
     expect(find.text('See the tower again'), findsNothing);

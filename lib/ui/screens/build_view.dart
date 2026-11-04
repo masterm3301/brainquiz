@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
@@ -15,9 +13,10 @@ import '../widgets/meter.dart';
 import '../widgets/neon_button.dart';
 import '../widgets/tower_view.dart';
 import 'levels_screen.dart' show BackLabel;
+import 'memorise_view.dart' show StudyClockTicker;
 
 /// How long the second look keeps the study tower on show.
-const Duration secondLookDuration = Duration(seconds: 3);
+const int secondLookSeconds = 3;
 
 /// Screen 02: drag blocks from the tray onto the tower.
 class BuildView extends StatefulWidget {
@@ -29,11 +28,12 @@ class BuildView extends StatefulWidget {
   State<BuildView> createState() => _BuildViewState();
 }
 
-class _BuildViewState extends State<BuildView> {
+class _BuildViewState extends State<BuildView>
+    with SingleTickerProviderStateMixin {
   final _towerKey = GlobalKey();
   bool _adShowing = false;
   bool _peeking = false;
-  Timer? _peekTimer;
+  StudyClockTicker? _peekClock;
 
   // Measured while building, read when a block is held or dropped.
   double _scale = 1;
@@ -43,7 +43,7 @@ class _BuildViewState extends State<BuildView> {
 
   @override
   void dispose() {
-    _peekTimer?.cancel();
+    _peekClock?.dispose();
     super.dispose();
   }
 
@@ -81,9 +81,13 @@ class _BuildViewState extends State<BuildView> {
     setState(() => _adShowing = false);
     if (earned && _attempt.earnSecondLook()) {
       setState(() => _peeking = true);
-      _peekTimer = Timer(secondLookDuration, () {
-        if (mounted) setState(() => _peeking = false);
-      });
+      // A ticker, not a timer: time away from the app does not use up the look.
+      _peekClock = StudyClockTicker(
+        this,
+        seconds: secondLookSeconds,
+        onTick: () {},
+        onDone: () => setState(() => _peeking = false),
+      )..start();
     }
   }
 
