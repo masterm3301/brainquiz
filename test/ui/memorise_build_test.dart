@@ -306,6 +306,18 @@ void main() {
     expect(find.text('Lock the tower'), findsOneWidget);
   });
 
+  testWidgets('second look: the 2-star limit shows beside the button', (t) async {
+    final ads = FakeAds()..ready = true;
+    await toBuild(t, ads: ads);
+    const note = 'The ad limits this attempt to 2 stars.';
+    expect(find.text('See the tower again'), findsOneWidget);
+    expect(find.text(note), findsOneWidget);
+    ads.ready = false;
+    await t.pump();
+    expect(find.text('See the tower again'), findsNothing);
+    expect(find.text(note), findsNothing);
+  });
+
   testWidgets('second look: earned shows the tower for 3s, then back '
       'unchanged', (t) async {
     final ads = FakeAds()..ready = true;
@@ -408,6 +420,9 @@ void main() {
         );
         expect(lock.top, greaterThanOrEqualTo(0));
         expect(lock.bottom, lessThanOrEqualTo(size.height));
+        final ref = reference(12)..finishStudy();
+        await placeRight(t, ref, 0);
+        expect(find.text('Block 2 of 10'), findsOneWidget);
         expect(t.takeException(), isNull);
       });
     }

@@ -69,10 +69,11 @@ class _WindReadyViewState extends State<WindReadyView> {
                       Text(
                         earned
                             ? 'Extra brace earned. You have two braces, and '
-                                  'the first one is free.'
+                                  'the first one is free. Using a brace limits '
+                                  'this attempt to 2 stars.'
                             : 'Once the wind starts you cannot add anything. '
-                                  'An extra brace is a free way to steady a '
-                                  'leaning tower.',
+                                  'An extra brace costs no points, but using it '
+                                  'limits this attempt to 2 stars.',
                         style: nunito(
                           15,
                           weight: 700,

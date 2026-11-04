@@ -46,6 +46,20 @@ void main() {
     expect(find.text('It has to stand'), findsOneWidget);
   });
 
+  testWidgets('the 2-star limit is stated before and after watching', (t) async {
+    phone(t);
+    final ads = FakeAds()..ready = true;
+    await buildPerfect(t, 1, ads: ads);
+    expect(find.textContaining('limits this attempt to 2 stars'), findsOneWidget);
+    expect(find.textContaining('free way'), findsNothing);
+    await t.tap(find.text('Watch ad for an extra brace'));
+    await t.pump();
+    ads.complete(true);
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('limits this attempt to 2 stars'), findsOneWidget);
+  });
+
   testWidgets('earned ad gives 2 braces; closed early gives 1', (t) async {
     phone(t);
     final ads = FakeAds()..ready = true;

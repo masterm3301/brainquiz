@@ -156,37 +156,57 @@ class _BuildViewState extends State<BuildView> {
                         onPressed: canLock ? _attempt.lock : null,
                       );
                       if (!offerLook) return lock;
-                      return IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Stack(
-                                children: [
-                                  NeonButton.outline(
-                                    'See the tower again',
-                                    onPressed: _adShowing || _peeking
-                                        ? null
-                                        : _secondLook,
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 6,
-                                    child: IgnorePointer(
-                                      child: Text(
-                                        'Ad'.toUpperCase(),
-                                        style: label(size: 10),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // One line at any text size: small phones need the
+                          // height for the arena.
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'The ad limits this attempt to 2 stars.',
+                              style: nunito(
+                                13,
+                                weight: 700,
+                                color: AppColors.textSecondary,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(flex: 2, child: lock),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 6),
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Stack(
+                                    children: [
+                                      NeonButton.outline(
+                                        'See the tower again',
+                                        onPressed: _adShowing || _peeking
+                                            ? null
+                                            : _secondLook,
+                                      ),
+                                      Positioned(
+                                        top: 4,
+                                        right: 6,
+                                        child: IgnorePointer(
+                                          child: Text(
+                                            'Ad'.toUpperCase(),
+                                            style: label(size: 10),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(flex: 2, child: lock),
+                              ],
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
