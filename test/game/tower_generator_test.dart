@@ -73,6 +73,18 @@ void main() {
     });
   });
 
+  test('no two tray blocks share colour, shape, and width', () {
+    _forEach((level, seed) {
+      final tray = generateTower(level, seed).tray;
+      final looks = {for (final b in tray) (b.color, b.shape, b.width)};
+      expect(
+        looks.length,
+        tray.length,
+        reason: 'level ${level.number} seed $seed',
+      );
+    });
+  });
+
   test('tray contains every tower block', () {
     _forEach((level, seed) {
       final t = generateTower(level, seed);

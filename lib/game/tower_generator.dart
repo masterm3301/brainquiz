@@ -59,18 +59,22 @@ GeneratedTower _build(LevelConfig level, int seed) {
   do {
     blocks = _tower(level, random);
   } while (blocks.first.width < blocks.last.width ||
-      blocks.toSet().length != blocks.length);
+      {for (final b in blocks) _look(b)}.length != blocks.length);
 
   final tray = [...blocks];
-  final taken = tray.toSet();
+  final taken = {for (final b in blocks) _look(b)};
   for (var i = 0; i < level.decoys; i++) {
     final decoy = _decoy(level, blocks, taken, random);
-    taken.add(decoy);
+    taken.add(_look(decoy));
     tray.add(decoy);
   }
   tray.shuffle(random);
   return GeneratedTower(seed: seed, blocks: blocks, tray: tray);
 }
+
+/// What tells tray blocks apart. Heights are too close to read on a tray
+/// tile (26 and 34 draw about 5 and 7px high), so height does not count.
+(BlockColor, BlockShape, double) _look(Block b) => (b.color, b.shape, b.width);
 
 List<Block> _tower(LevelConfig level, Random random) {
   final n = level.blocks;
@@ -108,14 +112,16 @@ Block _make(BlockColor color, BlockShape shape, int widthStep, Random random) {
 Block _decoy(
   LevelConfig level,
   List<Block> real,
-  Set<Block> taken,
+  Set<(BlockColor, BlockShape, double)> taken,
   Random random,
 ) {
   for (var i = 0; i < _decoyRetries; i++) {
     final candidate = level.number < 7
         ? _randomDecoy(level, random)
         : _variant(level, real[random.nextInt(real.length)], random);
-    if (candidate != null && !taken.contains(candidate)) return candidate;
+    if (candidate != null && !taken.contains(_look(candidate))) {
+      return candidate;
+    }
   }
   throw StateError('Could not find a distinct decoy for level ${level.number}');
 }
