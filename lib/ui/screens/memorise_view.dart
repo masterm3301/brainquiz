@@ -30,6 +30,8 @@ class MemoriseView extends StatefulWidget {
 class _MemoriseViewState extends State<MemoriseView>
     with SingleTickerProviderStateMixin {
   late final StudyClockTicker _clock;
+  bool _clockStarted = false;
+  Animation<double>? _routeEntering;
 
   @override
   void initState() {
@@ -39,11 +41,41 @@ class _MemoriseViewState extends State<MemoriseView>
       seconds: widget.attempt.level.studySeconds,
       onTick: () => setState(() {}),
       onDone: widget.attempt.finishStudy,
-    )..start();
+    );
+  }
+
+  /// The clock waits for the page transition, so all the study time is
+  /// spent with the tower fully on show.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_clockStarted || _routeEntering != null) return;
+    final route = ModalRoute.of(context);
+    final enter = route?.animation;
+    // A route's first frame is offstage, measured for hero flights, and its
+    // animation reads as complete then even though the transition is to come.
+    if (enter == null || (enter.isCompleted && !route!.offstage)) {
+      _startClock();
+    } else {
+      _routeEntering = enter..addStatusListener(_onRouteStatus);
+    }
+  }
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (!status.isCompleted) return;
+    _routeEntering?.removeStatusListener(_onRouteStatus);
+    _routeEntering = null;
+    _startClock();
+  }
+
+  void _startClock() {
+    _clockStarted = true;
+    _clock.start();
   }
 
   @override
   void dispose() {
+    _routeEntering?.removeStatusListener(_onRouteStatus);
     _clock.dispose();
     super.dispose();
   }

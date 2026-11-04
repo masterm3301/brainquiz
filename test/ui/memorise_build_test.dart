@@ -1,6 +1,8 @@
 import 'package:brainquiz/game/attempt.dart';
 import 'package:brainquiz/game/block.dart';
+import 'package:brainquiz/progress/progress.dart';
 import 'package:brainquiz/ui/screens/build_view.dart';
+import 'package:brainquiz/ui/screens/memorise_view.dart';
 import 'package:brainquiz/ui/widgets/arena.dart';
 import 'package:brainquiz/ui/widgets/block_view.dart';
 import 'package:brainquiz/ui/widgets/block_tray.dart';
@@ -466,5 +468,49 @@ void main() {
         expect(t.takeException(), isNull);
       });
     }
+  });
+
+  group('study clock and the page transition', () {
+    final level12 = Progress({
+      for (var i = 1; i <= 11; i++) i: const LevelRecord(stars: 3, bestPoints: 100),
+    });
+
+    testWidgets('level 12 keeps all 3 seconds for after the transition', (
+      t,
+    ) async {
+      await pumpApp(t, progress: level12);
+      await t.tap(find.text('Continue level 12'));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 16));
+      final enter = ModalRoute.of(t.element(find.byType(MemoriseView)))!.animation!;
+      expect(enter.isCompleted, isFalse);
+      while (!enter.isCompleted) {
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      await t.pump();
+      final bar = t.widget<FractionallySizedBox>(
+        find.byType(FractionallySizedBox),
+      );
+      expect(bar.widthFactor, closeTo(1, 0.02));
+      expect(find.text('3'), findsOneWidget);
+
+      await pumpFor(t, 2.8);
+      expect(find.text('Memorise the tower'), findsOneWidget);
+      await pumpFor(t, 0.4);
+      expect(find.text('Memorise the tower'), findsNothing);
+      expect(find.text('Block 1 of 10'), findsOneWidget);
+    });
+
+    testWidgets('going back during the transition cleans up', (t) async {
+      await pumpApp(t, progress: level12);
+      await t.tap(find.text('Continue level 12'));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 100));
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(find.text('Continue level 12'), findsOneWidget);
+      expect(find.byType(MemoriseView), findsNothing);
+      expect(t.takeException(), isNull);
+    });
   });
 }
