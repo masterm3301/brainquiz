@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same value as AppColors.background in lib/ui/theme/tokens.dart -->
+    <color name="app_background">#FF05070D</color>
+</resources>

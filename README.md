@@ -1,17 +1,45 @@
-# brainquiz
+# Tower Build
 
-A new Flutter project.
+A dark, neon, 2D memory game for Android and iOS. A tower of coloured blocks
+is shown for a few seconds. Rebuild it from memory by dragging blocks from the
+tray, lock it, and see whether it stands against the wind. Rewarded ads are the
+only ads: one optional extra brace, offered before the wind starts.
 
-## Getting Started
+Portrait only, dark only, no sound, no accounts, no backend. Progress is saved
+on the device.
 
-This project is a starting point for a Flutter application.
+## Run
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter pub get
+flutter run -d <emulator or simulator id>
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Run the app on an emulator or simulator only (Android `Pixel_3a_API_34`, or the
+iOS Simulator).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Test
+
+```bash
+flutter test
+flutter analyze
+```
+
+To regenerate the launcher icon:
+
+```bash
+flutter test test/visual/render_icon_test.dart
+dart run flutter_launcher_icons
+```
+
+## Before a store release
+
+All ad IDs are Google's test IDs. They live in `lib/ads/ad_ids.dart`, the
+Android manifest (`android/app/src/main/AndroidManifest.xml`), and
+`ios/Runner/Info.plist`. Change these before release:
+
+- The app ID: `com.example.brainquiz` is a placeholder on both platforms.
+- Replace every test ad ID with real ones, in all three places above.
+- Recheck Google's and Apple's current rules for teen players (ad content
+  rating, consent, and data handling), including whether Apple's App Tracking
+  Transparency prompt is needed.

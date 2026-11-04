@@ -21,4 +21,5 @@ abstract final class AppColors {
   static const arenaFell = Color(0xFF2A0D0C);
   static const borderStood = Color(0xFF1C3A28);
   static const borderFell = Color(0xFF2A1A1C);
+  static const transparent = Color(0x00000000);
 }

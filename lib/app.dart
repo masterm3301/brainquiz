@@ -31,7 +31,7 @@ class TowerBuildApp extends StatelessWidget {
           displayColor: AppColors.text,
         ),
         splashFactory: NoSplash.splashFactory,
-        highlightColor: const Color(0x00000000),
+        highlightColor: AppColors.transparent,
       ),
       home: home,
     );

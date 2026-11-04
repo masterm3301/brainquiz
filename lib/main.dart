@@ -9,6 +9,7 @@ import 'progress/progress_controller.dart';
 import 'progress/progress_store.dart';
 import 'ui/app_scope.dart';
 import 'ui/screens/menu_screen.dart';
+import 'ui/theme/tokens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +19,7 @@ Future<void> main() async {
   });
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Color(0x00000000),
+    statusBarColor: AppColors.transparent,
     statusBarIconBrightness: Brightness.light,
     statusBarBrightness: Brightness.dark,
   ));
