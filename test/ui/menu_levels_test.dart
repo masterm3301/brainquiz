@@ -38,9 +38,10 @@ void main() {
   testWidgets('Play opens level 1', (t) async {
     await pumpApp(t);
     await t.tap(find.text('Play'));
-    await t.pumpAndSettle();
+    await t.pump();
+    await t.pump(const Duration(seconds: 1));
     expect(find.byType(AttemptFlow), findsOneWidget);
-    expect(find.text('Level 1'), findsOneWidget);
+    expect(find.text('Level 1 of 12'), findsOneWidget);
     await t.pageBack();
     await t.pumpAndSettle();
     expect(find.byType(MenuScreen), findsOneWidget);
@@ -68,8 +69,9 @@ void main() {
   testWidgets('unlocked and cleared levels open', (t) async {
     await pumpApp(t, progress: cleared(2), home: const LevelsScreen());
     await t.tap(find.text('Level 1'));
-    await t.pumpAndSettle();
-    expect(find.text('Level 1'), findsOneWidget);
+    await t.pump();
+    await t.pump(const Duration(seconds: 1));
+    expect(find.text('Level 1 of 12'), findsOneWidget);
     expect(find.byType(AttemptFlow), findsOneWidget);
     await t.pageBack();
     await t.pumpAndSettle();
