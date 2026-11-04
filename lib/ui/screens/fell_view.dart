@@ -7,7 +7,7 @@ import '../widgets/arena.dart';
 import '../widgets/collapse_view.dart';
 import '../widgets/meter.dart';
 import '../widgets/panel.dart';
-import 'hold_view.dart' show ScreenBody;
+import '../widgets/screen_body.dart';
 
 /// Screen 05: the tower fell, and why.
 class FellView extends StatefulWidget {
@@ -50,7 +50,7 @@ class _FellViewState extends State<FellView> {
           style: nunito(32, weight: 900, letterSpacing: -0.5),
         ),
         const SizedBox(height: 20),
-        Expanded(
+        ArenaSlot(
           child: Arena(
             mood: ArenaMood.fell,
             child: CollapseView(

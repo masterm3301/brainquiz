@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -12,47 +10,8 @@ import '../widgets/arena.dart';
 import '../widgets/meter.dart';
 import '../widgets/neon_button.dart';
 import '../widgets/panel.dart';
+import '../widgets/screen_body.dart';
 import '../widgets/tower_view.dart';
-
-/// Shared frame for the wind and result screens: the sheet's padding, with
-/// a scroll fallback so large text on a short phone never overflows.
-class ScreenBody extends StatelessWidget {
-  const ScreenBody({super.key, required this.children});
-
-  final List<Widget> children;
-
-  /// Below this height the screen scrolls instead of squeezing further.
-  static const double minHeight = 820;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
-    body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final compact = c.maxHeight < 700;
-          return SingleChildScrollView(
-            child: SizedBox(
-              height: math.max(c.maxHeight, minHeight),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  24,
-                  compact ? 12 : 24,
-                  24,
-                  compact ? 12 : 28,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: children,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    ),
-  );
-}
 
 /// Screen 03: hands off. A [Ticker] feeds real frame deltas to the
 /// simulation, which clamps them itself.
@@ -98,6 +57,13 @@ class _HoldViewState extends State<HoldView>
   void _tick(Duration elapsed) {
     final dt = (elapsed - _last).inMicroseconds / 1e6;
     _last = elapsed;
+    // Leaving (a pop or an iOS back swipe) pauses the wind: nothing may end
+    // or be recorded while this route is on its way out.
+    final route = ModalRoute.of(context);
+    if (route != null &&
+        (!route.isCurrent || route.navigator?.userGestureInProgress == true)) {
+      return;
+    }
     _sim.step(dt);
     if (_sim.leanDegrees.abs() > 0.01) _direction = _sim.leanDegrees.sign.toInt();
     if (_sim.fallen || _sim.finished) {
@@ -174,7 +140,7 @@ class _HoldViewState extends State<HoldView>
           ('Lean', leanText, color),
         ]),
         const SizedBox(height: 16),
-        Expanded(
+        ArenaSlot(
           child: Arena(
             wind: true,
             child: TowerView(

@@ -9,7 +9,7 @@ import '../widgets/arena.dart';
 import '../widgets/neon_button.dart';
 import '../widgets/panel.dart';
 import '../widgets/tower_view.dart';
-import 'hold_view.dart' show ScreenBody;
+import '../widgets/screen_body.dart';
 
 /// Screen 04: the tower stood.
 class StoodView extends StatelessWidget {
@@ -50,7 +50,7 @@ class StoodView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Expanded(
+        ArenaSlot(
           child: Arena(
             mood: ArenaMood.stood,
             child: TowerView(placed: attempt.placed),

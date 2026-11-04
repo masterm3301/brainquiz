@@ -8,7 +8,7 @@ import '../widgets/arena.dart';
 import '../widgets/neon_button.dart';
 import '../widgets/panel.dart';
 import '../widgets/tower_view.dart';
-import 'hold_view.dart' show ScreenBody;
+import '../widgets/screen_body.dart';
 
 /// Between the lock and the wind: the only place the extra-brace ad is
 /// offered. Shown only when an ad is ready.
@@ -46,7 +46,7 @@ class _WindReadyViewState extends State<WindReadyView> {
           style: nunito(28, weight: 900, letterSpacing: -0.4),
         ),
         const SizedBox(height: 18),
-        Expanded(
+        ArenaSlot(
           child: Arena(
             child: TowerView(placed: widget.attempt.placed),
           ),

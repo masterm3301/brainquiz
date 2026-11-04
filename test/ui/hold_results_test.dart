@@ -1,6 +1,9 @@
 import 'package:brainquiz/game/attempt.dart';
 import 'package:brainquiz/game/levels.dart';
+import 'package:brainquiz/progress/progress.dart';
+import 'package:brainquiz/game/explanation.dart';
 import 'package:brainquiz/game/tower_generator.dart';
+import 'package:brainquiz/ui/screens/levels_screen.dart';
 import 'package:brainquiz/ui/app_scope.dart';
 import 'package:brainquiz/ui/screens/attempt_flow.dart';
 import 'package:brainquiz/ui/screens/fell_view.dart';
@@ -8,54 +11,14 @@ import 'package:brainquiz/ui/screens/hold_view.dart';
 import 'package:brainquiz/ui/screens/stood_view.dart';
 import 'package:brainquiz/ui/screens/wind_ready_view.dart';
 import 'package:brainquiz/ui/widgets/collapse_view.dart';
+import 'package:brainquiz/ui/widgets/neon_button.dart';
 import 'package:brainquiz/ui/widgets/tower_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_ads.dart';
 import '../support/pump_app.dart';
-import 'memorise_build_test.dart'
-    show placeBlock, placeRight, pumpSeconds, reference, toBuild;
-
-/// Builds the whole tower right and locks it.
-Future<void> buildPerfect(WidgetTester t, int level, {FakeAds? ads}) async {
-  await toBuild(t, level: level, ads: ads);
-  final ref = reference(level);
-  ref.finishStudy();
-  for (var row = 0; row < levels[level - 1].blocks; row++) {
-    await placeRight(t, ref, row);
-  }
-  await tapLock(t);
-}
-
-/// Builds a tower with the first tray blocks, which is wrong on level 4+.
-Future<void> buildWrong(WidgetTester t, int level, {FakeAds? ads}) async {
-  await toBuild(t, level: level, ads: ads);
-  final ref = reference(level);
-  ref.finishStudy();
-  for (var row = 0; row < levels[level - 1].blocks; row++) {
-    await placeBlock(t, ref, ref.tray.first);
-  }
-  expect(ref.report.mustFall, isTrue);
-  await tapLock(t);
-}
-
-Future<void> tapLock(WidgetTester t) async {
-  final finder = find.text('Lock the tower').evaluate().isNotEmpty
-      ? find.text('Lock the tower')
-      : find.text('Lock');
-  await t.tap(finder);
-  await t.pump();
-  await t.pump();
-  await t.pump();
-}
-
-/// A phone-sized screen for the flow tests.
-void phone(WidgetTester t) {
-  t.view.physicalSize = const Size(428, 908);
-  t.view.devicePixelRatio = 1;
-  addTearDown(t.view.reset);
-}
+import '../support/flow_helpers.dart';
 
 AppScope scopeOf(WidgetTester t) =>
     AppScope.of(t.element(find.byType(AttemptFlow)));
@@ -206,29 +169,51 @@ void main() {
 
   testWidgets('clearing level 12 shows the final state', (t) async {
     phone(t);
-    await pumpApp(t, home: const _Finale());
-    await t.pump();
+    final progress = Progress({
+      for (var n = 1; n <= 11; n++) n: const LevelRecord(stars: 3, bestPoints: 100),
+    });
+    await buildPerfect(t, 12, progress: progress);
+    await pumpSeconds(t, 41);
+    expect(find.text('Your tower stood'), findsOneWidget);
     expect(find.text('You cleared all 12'), findsOneWidget);
+    expect(scopeOf(t).progress.progress.records.containsKey(12), isTrue);
     await t.tap(find.text('You cleared all 12'));
     await t.pumpAndSettle();
+    expect(find.byType(LevelsScreen), findsOneWidget);
     expect(find.text('Twelve levels'), findsOneWidget);
+  });
+
+  testWidgets('a stood result is saved exactly once', (t) async {
+    phone(t);
+    final store = CountingProgressStore(Progress.empty);
+    await buildPerfect(t, 1, store: store);
+    await pumpSeconds(t, 9);
+    expect(find.text('Your tower stood'), findsOneWidget);
+    await pumpSeconds(t, 3);
+    expect(store.saves, 1);
+    await t.tap(find.text('Level 2 — hold for 10s'));
+    await t.pump();
+    await pumpSeconds(t, 1);
+    expect(store.saves, 1);
+    expect(scopeOf(t).progress.progress.records.length, 1);
   });
 
   testWidgets('a fall shows the true reason and records nothing', (t) async {
     phone(t);
-    await buildWrong(t, 4);
+    final ref = await buildWrong(t, 4);
     await pumpSeconds(t, 19);
-    final ref = reference(4)..finishStudy();
+    final text = explainFall(ref.report, total: 6);
+    expect(find.text(text.headline), findsOneWidget);
+    expect(find.text(text.detail), findsOneWidget);
+    expect(find.text('${ref.report.score}%'), findsOneWidget);
     expect(find.textContaining('FELL AT '), findsOneWidget);
     expect(find.textContaining(' OF 18 SECONDS'), findsOneWidget);
-    expect(find.text('AT LOCK'), findsNothing);
     expect(find.text('At lock'), findsOneWidget);
     expect(find.text('WHAT WENT WRONG'), findsOneWidget);
     expect(find.byType(CollapseView), findsOneWidget);
     expect(find.text('Replay the fall'), findsOneWidget);
     expect(find.text('Build again'), findsOneWidget);
     expect(scopeOf(t).progress.progress.records, isEmpty);
-    expect(ref.phase, AttemptPhase.build);
   });
 
   testWidgets('Replay the fall replays without changing the result', (t) async {
@@ -289,6 +274,29 @@ void main() {
     expect(scope.progress.progress.records, isEmpty);
   });
 
+  testWidgets('back at about 7.9s of the hold records nothing', (t) async {
+    phone(t);
+    final store = CountingProgressStore(Progress.empty);
+    await pumpApp(t, store: store, home: const _Launcher());
+    await t.tap(find.text('open'));
+    await t.pumpAndSettle();
+    await pumpSeconds(t, 6);
+    final ref = reference(1)..finishStudy();
+    for (var row = 0; row < 3; row++) {
+      await placeRight(t, ref, row);
+    }
+    await tapLock(t);
+    await pumpFor(t, 7.9);
+    expect(find.byType(HoldView), findsOneWidget);
+    await t.state<NavigatorState>(find.byType(Navigator)).maybePop();
+    await pumpSeconds(t, 1);
+    await t.pumpAndSettle();
+    expect(find.byType(AttemptFlow), findsNothing);
+    final scope = AppScope.of(t.element(find.text('open')));
+    expect(scope.progress.progress.records, isEmpty);
+    expect(store.saves, 0);
+  });
+
   testWidgets('a long pump gap advances the wind by one clamped step', (
     t,
   ) async {
@@ -301,6 +309,85 @@ void main() {
     expect(sim.elapsed - before, lessThanOrEqualTo(0.0501));
     expect(sim.finished, isFalse);
     expect(find.byType(HoldView), findsOneWidget);
+  });
+
+  group('primary buttons are fully on screen without scrolling', () {
+    Attempt locked() {
+      final a = Attempt(level: levels[3], seed: 42)..finishStudy();
+      for (final b in a.tower.blocks) {
+        a.drop(b, 0);
+      }
+      a.lock();
+      return a;
+    }
+
+    AttemptResult result(Attempt a, {required bool stood}) => AttemptResult(
+      level: a.level,
+      stood: stood,
+      correct: 6,
+      total: 6,
+      heldSeconds: 18,
+      points: 240,
+      stars: 3,
+      lockStability: 34,
+      fellAtSeconds: stood ? 0 : 9,
+      headline: 'Right blocks, wrong order',
+      detail:
+          '${explainFall(a.report, total: 6).detail} The wide yellow block '
+          'sat too high, so the tower was top heavy.',
+    );
+
+    void expectOnScreen(WidgetTester t, Finder button, Size size) {
+      final rect = t.getRect(button);
+      expect(rect.top, greaterThanOrEqualTo(0));
+      expect(rect.bottom, lessThanOrEqualTo(size.height));
+    }
+
+    for (final size in const [Size(360, 568), Size(393, 735)]) {
+      Future<void> show(WidgetTester t, Widget Function(Attempt) view) async {
+        phone(t, size: size);
+        final attempt = locked();
+        await pumpApp(t, home: view(attempt));
+        await t.pump(const Duration(milliseconds: 100));
+        expect(t.takeException(), isNull);
+      }
+
+      testWidgets('hold brace button at ${size.width}x${size.height}', (t) async {
+        await show(
+          t,
+          (a) => HoldView(attempt: a, sim: a.startHold(), onEnded: (_) {}),
+        );
+        expectOnScreen(t, find.widgetWithText(NeonButton, 'Brace it (1 left)'), size);
+        expectOnScreen(t, find.text('STABILITY'), size);
+      });
+
+      testWidgets('stood button at ${size.width}x${size.height}', (t) async {
+        await show(
+          t,
+          (a) => StoodView(
+            attempt: a,
+            result: result(a, stood: true),
+            onNextLevel: () {},
+            onBackToLevels: () {},
+          ),
+        );
+        expectOnScreen(t, find.widgetWithText(NeonButton, 'Level 5 — hold for 22s'), size);
+      });
+
+      testWidgets('fell buttons at ${size.width}x${size.height}', (t) async {
+        await show(
+          t,
+          (a) => FellView(
+            attempt: a,
+            result: result(a, stood: false),
+            direction: 1,
+            onBuildAgain: () {},
+          ),
+        );
+        expectOnScreen(t, find.text('Build again'), size);
+        expectOnScreen(t, find.text('Replay the fall'), size);
+      });
+    }
   });
 
   group('no overflow at 320x568, text scale 1.3, 10 blocks', () {
@@ -402,42 +489,4 @@ class _Launcher extends StatelessWidget {
       child: const Text('open'),
     ),
   );
-}
-
-/// Level 12 standing.
-class _Finale extends StatelessWidget {
-  const _Finale();
-
-  @override
-  Widget build(BuildContext context) {
-    final a = Attempt(level: levels[11], seed: 7)..finishStudy();
-    final result = AttemptResult(
-      level: a.level,
-      stood: true,
-      correct: 10,
-      total: 10,
-      heldSeconds: 40,
-      points: 400,
-      stars: 3,
-      lockStability: 100,
-      fellAtSeconds: 0,
-      headline: 'It stood',
-      detail: 'Every block matched.',
-    );
-    return StoodView(
-      attempt: a,
-      result: result,
-      onNextLevel: () {},
-      onBackToLevels: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const _Levels()),
-      ),
-    );
-  }
-}
-
-class _Levels extends StatelessWidget {
-  const _Levels();
-
-  @override
-  Widget build(BuildContext context) => const Text('Twelve levels');
 }

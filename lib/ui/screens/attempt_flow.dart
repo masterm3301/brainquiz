@@ -81,7 +81,7 @@ class _AttemptFlowState extends State<AttemptFlow> {
 
   void _onHoldEnded(int direction) {
     final attempt = _attempt!;
-    if (_result != null) return;
+    if (!mounted || _result != null) return;
     final result = attempt.finish(_sim!);
     _direction = direction;
     _result = result;

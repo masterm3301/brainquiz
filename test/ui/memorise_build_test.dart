@@ -1,8 +1,5 @@
-import 'package:brainquiz/ads/rewarded_ads.dart';
 import 'package:brainquiz/game/attempt.dart';
 import 'package:brainquiz/game/block.dart';
-import 'package:brainquiz/game/levels.dart';
-import 'package:brainquiz/ui/screens/attempt_flow.dart';
 import 'package:brainquiz/ui/screens/build_view.dart';
 import 'package:brainquiz/ui/widgets/arena.dart';
 import 'package:brainquiz/ui/widgets/block_view.dart';
@@ -13,53 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_ads.dart';
+import '../support/flow_helpers.dart';
 import '../support/pump_app.dart';
-
-/// The same attempt the screen builds (seed 42), for reading the answer.
-Attempt reference(int level) => Attempt(level: levels[level - 1], seed: 42);
-
-Future<void> pumpFlow(WidgetTester t, {int level = 1, RewardedAds? ads}) async {
-  await pumpApp(
-    t,
-    ads: ads,
-    home: AttemptFlow(levelNumber: level),
-  );
-}
-
-Future<void> pumpSeconds(WidgetTester t, int seconds) async {
-  for (var i = 0; i < seconds * 20 + 10; i++) {
-    await t.pump(const Duration(milliseconds: 50));
-  }
-}
-
-Future<void> toBuild(WidgetTester t, {int level = 1, RewardedAds? ads}) async {
-  await pumpFlow(t, level: level, ads: ads);
-  await pumpSeconds(t, levels[level - 1].studySeconds);
-}
-
-/// Drags tray tile [i] to [to] (global).
-Future<void> dragTile(WidgetTester t, int i, Offset to) async {
-  final from = t.getCenter(find.byType(Draggable<Block>).at(i));
-  final g = await t.startGesture(from);
-  for (var s = 1; s <= 10; s++) {
-    await g.moveTo(Offset.lerp(from, to, s / 10)!);
-    await t.pump(const Duration(milliseconds: 20));
-  }
-  await g.up();
-  await t.pump();
-}
-
-Offset arenaCentre(WidgetTester t) => t.getCenter(find.byType(Arena));
-
-/// Places the tower's real block [row] on the centre line.
-Future<void> placeRight(WidgetTester t, Attempt ref, int row) =>
-    placeBlock(t, ref, ref.tower.blocks[row]);
-
-/// Drops [block] on the centre line, mirroring it on [ref].
-Future<void> placeBlock(WidgetTester t, Attempt ref, Block block) async {
-  await dragTile(t, ref.tray.indexOf(block), arenaCentre(t));
-  ref.drop(block, 0);
-}
 
 void main() {
   testWidgets('memorise shows the tower and then hides it', (t) async {

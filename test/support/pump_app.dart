@@ -21,6 +21,18 @@ class MemoryProgressStore implements ProgressStore {
   Future<void> save(Progress progress) async => this.progress = progress;
 }
 
+/// Counts saves, so a test can prove a result was recorded once.
+class CountingProgressStore extends MemoryProgressStore {
+  CountingProgressStore(super.progress);
+  int saves = 0;
+
+  @override
+  Future<void> save(Progress progress) async {
+    saves++;
+    await super.save(progress);
+  }
+}
+
 /// Pumps the whole app inside an [AppScope] with an in-memory store.
 Future<void> pumpApp(
   WidgetTester t, {
@@ -28,9 +40,10 @@ Future<void> pumpApp(
   RewardedAds? ads,
   int Function()? newSeed,
   Widget? home,
+  ProgressStore? store,
 }) async {
   await loadNunito();
-  final controller = ProgressController(MemoryProgressStore(progress));
+  final controller = ProgressController(store ?? MemoryProgressStore(progress));
   await controller.load();
   await t.pumpWidget(AppScope(
     progress: controller,

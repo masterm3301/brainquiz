@@ -2,13 +2,16 @@ import 'package:brainquiz/game/attempt.dart';
 import 'package:brainquiz/game/block.dart';
 import 'package:brainquiz/game/levels.dart';
 import 'package:brainquiz/ui/screens/attempt_flow.dart';
+import 'package:brainquiz/ui/theme/tokens.dart';
 import 'package:brainquiz/ui/widgets/arena.dart';
+import 'package:brainquiz/ui/widgets/collapse_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_ads.dart';
+import '../support/load_font.dart';
 import '../support/pump_app.dart';
-import '../ui/memorise_build_test.dart' show placeBlock, placeRight;
+import '../support/flow_helpers.dart' show placeBlock, placeRight;
 
 void main() {
   Future<void> pumpSeconds(WidgetTester t, double seconds) async {
@@ -112,4 +115,38 @@ void main() {
     await pumpSeconds(t, 2);
     await golden(t, 'fell');
   });
+
+  for (final level in [8, 12]) {
+    testWidgets('fell pose level $level golden', (t) async {
+      t.view.physicalSize = const Size(428, 560);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      await loadNunito();
+      final a = Attempt(level: levels[level - 1], seed: 42)..finishStudy();
+      for (final b in a.tower.blocks) {
+        a.drop(b, 0);
+      }
+      await t.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            backgroundColor: AppColors.background,
+            body: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Arena(
+                mood: ArenaMood.fell,
+                child: CollapseView(
+                  placed: a.placed,
+                  seed: level * 1000 + 9,
+                  direction: level == 8 ? -1 : 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpSeconds(t, 2);
+      await golden(t, 'fell_level_$level');
+    });
+  }
 }
