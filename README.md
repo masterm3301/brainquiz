@@ -39,7 +39,7 @@ All ad IDs are Google's test IDs. They live in `lib/ads/ad_ids.dart`, the
 Android manifest (`android/app/src/main/AndroidManifest.xml`), and
 `ios/Runner/Info.plist`. Change these before release:
 
-- The app ID: `com.example.brainquiz` is a placeholder. It lives in
+- The app ID: `com.otot.brainquiz` is a placeholder. It lives in
   `applicationId` and `namespace` in `android/app/build.gradle.kts`, and as the
   bundle ID in the Xcode project.
 - Signing: the Android release build is signed with the debug keys. Set up a

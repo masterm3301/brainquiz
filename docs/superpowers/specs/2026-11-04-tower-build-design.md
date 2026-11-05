@@ -92,10 +92,12 @@ These would make it a failure even if it technically works:
 ### 4. Result
 
 **It stood (screen 04):**
+
 - Shows memory score (`6 / 6`), seconds held, points, a "Why it held" line, and a button to the next level.
 - The tower must stand to unlock the next level.
 
 **It fell (screen 05):**
+
 - Shows the second it fell, a "What went wrong" line, stability at lock, "Replay the fall", and "Build again".
 - The headline comes from the real cause: for example, "Right blocks, crooked stack" or "Two wrong blocks". The sheet's "Right blocks, wrong order" contradicts its own text ("Order was correct"), so don't copy it word for word.
 - "Replay the fall" replays that collapse. "Build again" gives a new tower at the same level, starting from Memorise.
@@ -105,11 +107,13 @@ These would make it a failure even if it technically works:
 Use a calculated stability model, not a rigid-body physics engine. A real simulation could topple a perfect tower through tiny numerical errors, which would break the fairness rule. Collapse can still be animated to look physical.
 
 Stability falls because of:
+
 - **Crooked drops:** distance from the block below. Small misses within a forgiving tolerance count as straight.
 - **Balance:** the tower's centre of mass moving away from the pillar, and heavy wide blocks sitting too high.
 - **Wrong blocks:** every wrong block costs stability, including one with the right shape but wrong colour. Otherwise colour would never matter.
 
 Required results:
+
 - A perfect copy stacked within tolerance stands at every level, every time, with no brace, for any wind.
 - The meter never lies: a high reading must usually stand and a low reading must usually fall.
 - From level 3 on, two or more wrong blocks always bring the tower down, in any wind and even with both braces. One wrong block may still stand, which earns 1 star. The meter must show red for a tower that can't stand.
@@ -130,19 +134,19 @@ Required results:
 Twelve levels, playable in order. Starting values for the builder to tune:
 
 | Level | Blocks | Study | Hold | Gusts | Decoys |
-|---|---|---|---|---|---|
-| 1 | 3 | 6s | 8s | 1 | 0 |
-| 2 | 4 | 6s | 10s | 1 | 0 |
-| 3 | 5 | 6s | 14s | 2 | 2 |
-| 4 | 6 | 6s | 18s | 3 | 4 |
-| 5 | 7 | 6s | 22s | 3 | 4 |
-| 6 | 7 | 5s | 24s | 3 | 4 |
-| 7 | 8 | 5s | 26s | 3 | 5 |
-| 8 | 8 | 5s | 28s | 4 | 5 |
-| 9 | 9 | 4s | 30s | 4 | 6 |
-| 10 | 9 | 4s | 32s | 4 | 6 |
-| 11 | 10 | 4s | 35s | 5 | 7 |
-| 12 | 10 | 3s | 40s | 5 | 7 |
+| ----- | ------ | ----- | ---- | ----- | ------ |
+| 1     | 3      | 6s    | 8s   | 1     | 0      |
+| 2     | 4      | 6s    | 10s  | 1     | 0      |
+| 3     | 5      | 6s    | 14s  | 2     | 2      |
+| 4     | 6      | 6s    | 18s  | 3     | 4      |
+| 5     | 7      | 6s    | 22s  | 3     | 4      |
+| 6     | 7      | 5s    | 24s  | 3     | 4      |
+| 7     | 8      | 5s    | 26s  | 3     | 5      |
+| 8     | 8      | 5s    | 28s  | 4     | 5      |
+| 9     | 9      | 4s    | 30s  | 4     | 6      |
+| 10    | 9      | 4s    | 32s  | 4     | 6      |
+| 11    | 10     | 4s    | 35s  | 5     | 7      |
+| 12    | 10     | 3s    | 40s  | 5     | 7      |
 
 Wind strength also rises by level. Shapes can be introduced gradually, starting with rectangles and squares. The tower must be scaled to fit the arena at 10 blocks on small phones.
 
@@ -162,16 +166,19 @@ After level 12, the next-level button becomes a simple "You cleared all 12" stat
 Every ad is optional and chosen by the player. There are no banners, interstitials, or forced ads.
 
 **Placements**
+
 - **See the tower again:** on the Build screen, once per attempt. Shows the study tower for 3 seconds, then returns to the build unchanged. Limits that attempt to 2 stars.
 - **Extra brace:** offered after "Lock the tower", before the wind starts, once per attempt. It costs no points. Using it limits that attempt to 2 stars.
 
 **Rules**
+
 - The game stays fully playable offline. If no ad is loaded, its button doesn't appear, and nothing else changes.
 - The reward is given only when the ad reports that it was earned. Closing it early gives nothing.
 - Ad buttons never appear during the wind.
 - Ads can't override the stability rules.
 
 **Setup**
+
 - Use Google's official Mobile Ads plugin, with ads kept behind a small interface so game logic and tests don't depend on it.
 - Use Google's test ad IDs in all builds for now. The real IDs are supplied at store release, from the owner's AdMob account.
 - Don't mark the app as child-directed, because it isn't aimed at under-13s. Declare the 13+ audience in the store listings.
@@ -184,12 +191,14 @@ Every ad is optional and chosen by the player. There are no banners, interstitia
 Same design language as 1b: near-black background, thin rules, square corners, heavy Nunito, small uppercase labels, glow on anything active.
 
 **Menu**
+
 - "Tower Build" title, a decorative glowing tower on a neon floor, and total points.
 - Main button: `Continue level N`, or `Play` on first launch.
 - `Levels` button.
 - `How to play`, using 1a's three-step format updated for the 1b rules.
 
 **Levels**
+
 - A vertical list of all 12, in the style of 1a's ladder but dark.
 - Each row shows the level number, block count, and stars or best points.
 - The current level is highlighted in green, and locked levels are dimmed with no glow.
@@ -197,21 +206,21 @@ Same design language as 1b: near-black background, thin rules, square corners, h
 
 ## Design tokens from sheet 1b
 
-| Use | Value |
-|---|---|
-| Background | `#05070d` |
-| Panels | `#0a0f1c` |
-| Rules and empty bars | `#12182a` |
-| Tray borders | `#1a2236` |
-| Dashed outlines and secondary button border | `#22304d` |
-| Text, primary | `#eef3ff` |
-| Text, secondary | `#c6cee6`, `#8a93b2` |
-| Labels | `#6b7394` |
-| Green, the main accent | `#22e06b`, with `#04210f` for text on it |
-| Cyan | `#06b6d4` |
-| Yellow | `#f5d90a` |
-| Red | `#ff3b30` |
-| Arena gradient: normal, stood, fell | `#0d2416`, `#133d22`, `#2a0d0c` |
+| Use                                         | Value                                    |
+| ------------------------------------------- | ---------------------------------------- |
+| Background                                  | `#05070d`                                |
+| Panels                                      | `#0a0f1c`                                |
+| Rules and empty bars                        | `#12182a`                                |
+| Tray borders                                | `#1a2236`                                |
+| Dashed outlines and secondary button border | `#22304d`                                |
+| Text, primary                               | `#eef3ff`                                |
+| Text, secondary                             | `#c6cee6`, `#8a93b2`                     |
+| Labels                                      | `#6b7394`                                |
+| Green, the main accent                      | `#22e06b`, with `#04210f` for text on it |
+| Cyan                                        | `#06b6d4`                                |
+| Yellow                                      | `#f5d90a`                                |
+| Red                                         | `#ff3b30`                                |
+| Arena gradient: normal, stood, fell         | `#0d2416`, `#133d22`, `#2a0d0c`          |
 
 Font weights are 700 to 900. The sheet is the reference for spacing and glow strength.
 
@@ -223,7 +232,7 @@ Font weights are 700 to 900. The sheet is the reference for spacing and glow str
 - Nunito is bundled with the app. The sheet only embeds web-font fragments, so use the proper font files and include the SIL Open Font License notice.
 - The stability model, tower generator, and scoring are plain Dart with automated tests, including many seeds at every level proving the perfect-copy guarantee.
 - The app icon and display name become Tower Build. The project folder and package stay `brainquiz`.
-- The work ends at tested release builds running on Android and iOS devices, using test ads. Store submission is a separate later step and is required before the ads earn money. The app ID stays `com.example.brainquiz` until then, and must be replaced before the first Google Play upload.
+- The work ends at tested release builds running on Android and iOS devices, using test ads. Store submission is a separate later step and is required before the ads earn money. The app ID stays `com.otot.brainquiz` until then, and must be replaced before the first Google Play upload.
 
 ## Left to the builder
 

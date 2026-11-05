@@ -1,4 +1,4 @@
-package com.example.brainquiz
+package com.otot.brainquiz
 
 import io.flutter.embedding.android.FlutterActivity
 

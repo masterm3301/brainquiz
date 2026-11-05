@@ -18,7 +18,7 @@
 - No backend, accounts, analytics, or in-app purchases. Network is used only by ads.
 - Rewarded ads only: no banners, interstitials, or forced ads. Ad buttons never appear during the wind.
 - All ad IDs are Google's test IDs. No real IDs and no store submission in this work.
-- Display name is `Tower Build`. Folder, package, and app ID stay `brainquiz` / `com.example.brainquiz`.
+- Display name is `Tower Build`. Folder, package, and app ID stay `brainquiz` / `com.otot.brainquiz`.
 - No sound.
 - Work happens on the `tower-build` branch. Each task ends with its tests and `flutter analyze` passing, then a commit. Never push.
 - Never use Chrome or `flutter run -d chrome`, including headless. Run the app only on emulators: Android `Pixel_3a_API_34` and the iOS Simulator.
@@ -39,11 +39,13 @@ Each has a test in the owning task.
 ### Task 1: Project foundation
 
 **Files:**
+
 - Modify: `pubspec.yaml`, `lib/main.dart`, `analysis_options.yaml` (only if needed), `android/app/src/main/AndroidManifest.xml`, `android/app/build.gradle.kts`, `ios/Runner/Info.plist`, `ios/Runner/Base.lproj/LaunchScreen.storyboard`, `android/app/src/main/res/drawable/launch_background.xml`, `android/app/src/main/res/drawable-v21/launch_background.xml`
 - Create: `assets/fonts/Nunito-Variable.ttf`, `assets/fonts/OFL.txt`, `lib/app.dart`, `lib/ui/theme/tokens.dart`, `lib/ui/theme/text.dart`
 - Replace: `test/widget_test.dart` with `test/app_test.dart`
 
 **Interfaces:**
+
 - Produces: `class AppColors` with static `Color` constants; `TextStyle nunito(double size, {int weight = 800, Color color = AppColors.text, double? letterSpacing, double? height})`; `TextStyle label({double size = 12, Color color = AppColors.label})`; `class TowerBuildApp extends StatelessWidget` with `Widget home` parameter.
 
 - [ ] **Step 1: Add dependencies and the font**
@@ -51,11 +53,13 @@ Each has a test in the owning task.
 Run: `flutter pub add shared_preferences google_mobile_ads && flutter pub add --dev flutter_launcher_icons`
 
 Download the font and licence:
+
 ```bash
 mkdir -p assets/fonts
 curl -sL 'https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/Nunito%5Bwght%5D.ttf' -o assets/fonts/Nunito-Variable.ttf
 curl -sL 'https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/OFL.txt' -o assets/fonts/OFL.txt
 ```
+
 Declare family `Nunito` and asset `assets/fonts/` in `pubspec.yaml`. Register `OFL.txt` with `LicenseRegistry` in `main()`.
 
 - [ ] **Step 2: Write the failing test** in `test/app_test.dart`
@@ -110,11 +114,14 @@ Expected: all pass, no issues. `test/widget_test.dart` is gone.
 ### Task 2: Blocks and levels
 
 **Files:**
+
 - Create: `lib/game/block.dart`, `lib/game/levels.dart`
 - Test: `test/game/levels_test.dart`, `test/game/block_test.dart`
 
 **Interfaces:**
+
 - Produces:
+
 ```dart
 enum BlockColor { green, cyan, yellow, red }
 enum BlockShape { rectangle, square, triangle, invertedTriangle }
@@ -190,12 +197,15 @@ Expected: PASS, no issues.
 ### Task 3: Stability model
 
 **Files:**
+
 - Create: `lib/game/stability.dart`
 - Test: `test/game/stability_test.dart`
 
 **Interfaces:**
+
 - Consumes: `Block`, `pillar`, `LevelConfig`.
 - Produces:
+
 ```dart
 const double dropTolerance = 0.035;
 class PlacedBlock { final Block block; final double x; } // x: centre, arena-width fraction, 0 = centre line
@@ -276,6 +286,7 @@ Expected: FAIL because the file doesn't exist.
 `snapDrop`: return 0 if `|rawX| <= dropTolerance`; otherwise `belowX` if `|rawX - belowX| <= dropTolerance`; otherwise `rawX`.
 
 `assessStability` compares `placed` to the same-length prefix of `target`:
+
 ```
 wrongRows = rows where placed block != target block
 crooked   = rows where |x[i] - x[i-1]| > dropTolerance (x[-1] = 0, the pillar)
@@ -290,6 +301,7 @@ mustFall  = level.wrongLimitApplies && wrongCount >= 2
 if mustFall: score = min(score, 35)
 score     = round and clamp to 0..100
 ```
+
 `meterLine`: score >= 70 gives the first line in the test, 40 to 69 the second, below 40 the third. Expose a testable way to get the line from a score (`meterLineFor(int score)`), and use that for `reportWithScore` in the test.
 
 The constants may be tuned only if every test here and in Task 5 still passes.
@@ -304,12 +316,15 @@ Expected: PASS, no issues.
 ### Task 4: Random tower generator
 
 **Files:**
+
 - Create: `lib/game/tower_generator.dart`
 - Test: `test/game/tower_generator_test.dart`
 
 **Interfaces:**
+
 - Consumes: `Block`, `LevelConfig`.
 - Produces:
+
 ```dart
 class GeneratedTower {
   final int seed;
@@ -372,12 +387,15 @@ Expected: PASS, no issues.
 ### Task 5: Wind simulation and fairness guarantees
 
 **Files:**
+
 - Create: `lib/game/hold_simulation.dart`
 - Test: `test/game/hold_simulation_test.dart`, `test/game/fairness_test.dart`
 
 **Interfaces:**
+
 - Consumes: `LevelConfig`, `assessStability`, `generateTower`, `PlacedBlock`.
 - Produces:
+
 ```dart
 const double maxLeanDegrees = 12;
 double clampedDt(double dt); // max 1/20 s, shared with the study clock
@@ -427,6 +445,7 @@ test('brace halves the lean and is limited', () {
 - [ ] **Step 2: Write the failing fairness tests** in `fairness_test.dart`
 
 Each uses 300 seeds per level:
+
 ```dart
 test('a perfect copy never falls, at any level, with no brace', () { /* score from assessStability on a straight copy; fallen == false */ });
 test('any tower scoring 70 or more never falls', () { /* score 70..100 */ });
@@ -451,6 +470,7 @@ Expected: FAIL because the file doesn't exist.
 Split the hold into `gusts` equal slots. In each slot, use `duration = min(slot * 0.7, 5)`, a random start within the slot, `amplitude` in 0.8 to 1.0, and a random direction.
 
 Each step:
+
 ```
 f       = 1 - score / 100
 target  = in a gust ? direction * amplitude * level.windStrength * (4 + 26 * f) : 0
@@ -459,6 +479,7 @@ if braced:   target *= 0.5       // for 4 s after a brace; does not stack, a new
 lean   += (target - lean) * (1 - exp(-dt / 0.8))
 fallen  = |lean| > maxLeanDegrees
 ```
+
 This first-order response can't overshoot, so a perfect copy never leans past 4°. That is what makes the fairness rule hold for any wind.
 
 - [ ] **Step 5: Run and confirm passing**
@@ -471,12 +492,15 @@ Expected: PASS, no issues.
 ### Task 6: Attempt, scoring, and result explanations
 
 **Files:**
+
 - Create: `lib/game/scoring.dart`, `lib/game/explanation.dart`, `lib/game/attempt.dart`
 - Test: `test/game/scoring_test.dart`, `test/game/explanation_test.dart`, `test/game/attempt_test.dart`
 
 **Interfaces:**
+
 - Consumes: Tasks 2 to 5.
 - Produces:
+
 ```dart
 int pointsFor({required int correct, required int heldSeconds, required int paidBraces}); // 30*correct + round(heldSeconds*10/3) - 40*paidBraces, min 0
 int starsFor({required int correct, required int total, required bool usedBrace, required bool usedSecondLook});
@@ -571,12 +595,15 @@ Expected: PASS, no issues.
 ### Task 7: Saved progress
 
 **Files:**
+
 - Create: `lib/progress/progress.dart`, `lib/progress/progress_store.dart`, `lib/progress/progress_controller.dart`
 - Test: `test/progress/progress_test.dart`
 
 **Interfaces:**
+
 - Consumes: `AttemptResult`.
 - Produces:
+
 ```dart
 class LevelRecord { final int stars, bestPoints; }
 class Progress {
@@ -641,12 +668,15 @@ Expected: PASS, no issues.
 ### Task 8: Rewarded ads
 
 **Files:**
+
 - Create: `lib/ads/rewarded_ads.dart`, `lib/ads/admob_rewarded_ads.dart`, `lib/ads/ad_ids.dart`, `test/support/fake_ads.dart`
 - Modify: `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`
 - Test: `test/ads/rewarded_ads_test.dart`
 
 **Interfaces:**
+
 - Produces:
+
 ```dart
 abstract class RewardedAds {
   ValueListenable<bool> get isReady;
@@ -679,12 +709,14 @@ Expected: FAIL because the files don't exist.
 - [ ] **Step 3: Implement `rewarded_ads.dart`, `ad_ids.dart`, and `fake_ads.dart`**
 
 `ad_ids.dart`, Google's published test IDs:
+
 - Rewarded unit, Android: `ca-app-pub-3940256099942544/5224354917`
 - Rewarded unit, iOS: `ca-app-pub-3940256099942544/1712485313`
 
 - [ ] **Step 4: Implement `AdMobRewardedAds`**
 
 `initialize()` in this order, catching all errors:
+
 1. `ConsentInformation.instance.requestConsentInfoUpdate(ConsentRequestParameters(), onSuccess, onFailure)`.
 2. On success, `ConsentForm.loadAndShowConsentFormIfRequired(...)`.
 3. If `await ConsentInformation.instance.canRequestAds()` is true: `MobileAds.instance.updateRequestConfiguration(RequestConfiguration(maxAdContentRating: MaxAdContentRating.t))`, then `MobileAds.instance.initialize()`, then load an ad.
@@ -692,6 +724,7 @@ Expected: FAIL because the files don't exist.
 Loading uses `RewardedAd.load(adUnitId: ..., request: const AdRequest(nonPersonalizedAds: true), rewardedAdLoadCallback: ...)`. Don't set any child-directed tag. `isReady` is true only with a loaded ad.
 
 `show()`:
+
 - Returns false at once if nothing is loaded or a show is in progress.
 - Sets `isReady` to false, sets `fullScreenContentCallback`, and calls `ad.show(onUserEarnedReward: ...)`.
 - Completes only on dismiss or failed-to-show, with whether the reward fired.
@@ -701,6 +734,7 @@ Loading uses `RewardedAd.load(adUnitId: ..., request: const AdRequest(nonPersona
 - [ ] **Step 5: Add native configuration**
 
 Google's test app IDs:
+
 - Android manifest, inside `<application>`: `<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>`
 - `Info.plist`: `GADApplicationIdentifier` = `ca-app-pub-3940256099942544~1458002511`, and `SKAdNetworkItems` with `cstr6suwn9.skadnetwork`.
 
@@ -716,12 +750,15 @@ Expected: PASS, no issues.
 ### Task 9: Neon widgets
 
 **Files:**
+
 - Create: `lib/ui/widgets/block_view.dart`, `lib/ui/widgets/tower_view.dart`, `lib/ui/widgets/arena.dart`, `lib/ui/widgets/neon_button.dart`, `lib/ui/widgets/panel.dart`, `lib/ui/widgets/meter.dart`, `lib/ui/widgets/collapse_view.dart`
 - Test: `test/ui/widgets_test.dart`, `test/visual/widgets_visual_test.dart`, `test/support/load_font.dart`
 
 **Interfaces:**
+
 - Consumes: `Block`, `pillar`, `PlacedBlock`, tokens.
 - Produces:
+
 ```dart
 Color blockColor(BlockColor c);
 Color meterColor(int percent); // green >= 70, yellow 40..69, red below 40
@@ -787,13 +824,16 @@ Expected: PASS, no issues.
 ### Task 10: Menu, levels, and how to play
 
 **Files:**
+
 - Create: `lib/ui/app_scope.dart`, `lib/ui/screens/menu_screen.dart`, `lib/ui/screens/levels_screen.dart`, `lib/ui/screens/how_to_play.dart`, `lib/ui/screens/attempt_flow.dart` (placeholder body until Task 11)
 - Modify: `lib/main.dart`
 - Test: `test/ui/menu_levels_test.dart`, `test/support/pump_app.dart`
 
 **Interfaces:**
+
 - Consumes: `ProgressController`, `Progress`, `levels`, `RewardedAds`, `TowerBuildApp`.
 - Produces:
+
 ```dart
 class AppScope extends InheritedWidget { final ProgressController progress; final RewardedAds ads; final int Function() newSeed; static AppScope of(BuildContext c); } // newSeed is clock-based in main(), fixed in tests
 class MenuScreen extends StatelessWidget {}
@@ -828,6 +868,7 @@ Expected: FAIL because the screens don't exist.
 **Levels:** title `Twelve levels`, subtitle `Taller towers, less time to study, stronger wind.`. A list panel with 1px rules. Each row has the number, `N blocks`, and stars plus best points if cleared. The current level uses green text with a soft glow, and locked rows use `label` colour at reduced opacity with no glow.
 
 **How to play:** a dark panel in a bottom sheet with exactly these three numbered lines:
+
 1. `Study the tower before the countdown ends.`
 2. `Rebuild it from the bottom up. Placed blocks stay put, so drop them straight.`
 3. `Lock it and hold through the wind. Wrong blocks and crooked drops can bring it down.`
@@ -844,19 +885,23 @@ Expected: PASS, no issues.
 ### Task 11: Memorise and Build screens
 
 **Files:**
+
 - Create: `lib/game/study_clock.dart`, `lib/ui/screens/memorise_view.dart`, `lib/ui/screens/build_view.dart`, `lib/ui/widgets/block_tray.dart`
 - Modify: `lib/ui/screens/attempt_flow.dart`
 - Test: `test/game/study_clock_test.dart`, `test/ui/memorise_build_test.dart`
 
 **Interfaces:**
+
 - Consumes: `Attempt`, `TowerView`, `Arena`, `Meter`, `BlockView`, `RewardedAds`, `clampedDt`.
 - Produces:
+
 ```dart
 class StudyClock { StudyClock(int seconds); void step(double dt); int get secondsLeft; double get fractionLeft; bool get done; }
 class MemoriseView extends StatefulWidget { const MemoriseView({required Attempt attempt, required int totalPoints}); }
 class BuildView extends StatefulWidget { const BuildView({required Attempt attempt}); }
 class BlockTray extends StatefulWidget { const BlockTray({required List<Block> blocks}); } // Draggable<Block> tiles
 ```
+
 `AttemptFlow` holds the `Attempt`, gets each seed from `AppScope.of(context).newSeed()`, and switches views by phase. System back returns to the previous screen and records nothing.
 
 - [ ] **Step 1: Write the failing tests**
@@ -916,11 +961,13 @@ Expected: PASS, no issues.
 ### Task 12: Wind-ready, Hold, and Result screens
 
 **Files:**
+
 - Create: `lib/ui/screens/wind_ready_view.dart`, `lib/ui/screens/hold_view.dart`, `lib/ui/screens/stood_view.dart`, `lib/ui/screens/fell_view.dart`
 - Modify: `lib/ui/screens/attempt_flow.dart`
 - Test: `test/ui/hold_results_test.dart`, `test/visual/screens_visual_test.dart`
 
 **Interfaces:**
+
 - Consumes: `Attempt`, `HoldSimulation`, `AttemptResult`, `ProgressController.record`, `CollapseView`, `RewardedAds`, `levels`.
 - Produces: `WindReadyView`, `HoldView`, `StoodView`, and `FellView`, each constructed with the `Attempt` (and `AttemptResult` where needed) plus callbacks from `AttemptFlow`: `onNextLevel`, `onBuildAgain`, `onBackToLevels`.
 
@@ -973,6 +1020,7 @@ Expected: PASS, no issues.
 ### Task 13: App icon, full playthrough, and release builds
 
 **Files:**
+
 - Create: `test/visual/render_icon_test.dart`, `assets/icon/icon.png` (generated), `test/flow/full_game_test.dart`
 - Modify: `pubspec.yaml` (launcher icons config), `README.md`
 
@@ -1001,10 +1049,12 @@ Expected: PASS. Any failure here is a real integration bug: fix it in the owning
 `render_icon_test.dart` uses `PictureRecorder` to paint a 1024×1024 opaque icon: `AppColors.background`, floor line, red pillar, and three glowing blocks. It writes `assets/icon/icon.png`.
 
 Configure `flutter_launcher_icons` for Android and iOS with `remove_alpha_ios: true`, then run:
+
 ```bash
 flutter test test/visual/render_icon_test.dart
 dart run flutter_launcher_icons
 ```
+
 Expected: the icon files are regenerated. Open `assets/icon/icon.png` and confirm it reads clearly at a small size.
 
 - [ ] **Step 4: Replace the README** with a short description, how to run it, how to run tests, the note that all ad IDs in `lib/ads/ad_ids.dart`, the Android manifest, and `Info.plist` are test IDs, and what must change before store release: app ID, real ad IDs, and a recheck of Google's and Apple's rules for teen players, including whether Apple's tracking prompt is needed.
@@ -1017,6 +1067,7 @@ flutter analyze
 flutter build apk --release
 flutter build ios --release --no-codesign
 ```
+
 Expected: all tests pass and analysis is clean. Both builds succeed.
 
 If a build is blocked by this machine's setup, record the exact error. A known candidate from `flutter doctor` is CocoaPods 1.15.0, which is below the recommended 1.16.2. Don't change global tools without the owner's approval.
@@ -1024,6 +1075,7 @@ If a build is blocked by this machine's setup, record the exact error. A known c
 - [ ] **Step 6: Run on the emulators**
 
 Run `flutter emulators --launch Pixel_3a_API_34`, wait for it to boot, then `flutter run -d <emulator id>`. Repeat on the iOS Simulator with `flutter emulators --launch apple_ios_simulator`. If the tool refuses release mode on an emulator, use profile or debug mode there, and say which mode was used. Check:
+
 - The launch screen has no white flash, and the name and icon are correct.
 - The EU consent form doesn't block play if it appears.
 - Drag and drop works, and a full level plays through. Use `adb` or `xcrun simctl` screenshots to compare screens with the sheet.
