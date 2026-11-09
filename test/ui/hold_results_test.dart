@@ -194,7 +194,7 @@ void main() {
     await t.tap(find.text('You cleared all 12'));
     await t.pumpAndSettle();
     expect(find.byType(LevelsScreen), findsOneWidget);
-    expect(find.text('Twelve levels'), findsOneWidget);
+    expect(find.text('Wind Levels'), findsOneWidget);
   });
 
   testWidgets('a stood result is saved exactly once', (t) async {

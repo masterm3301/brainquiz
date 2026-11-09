@@ -1,7 +1,5 @@
 import '../game/attempt.dart';
 
-const int _lastLevel = 12;
-
 /// Best result for one cleared level.
 class LevelRecord {
   const LevelRecord({required this.stars, required this.bestPoints});
@@ -11,9 +9,12 @@ class LevelRecord {
 
 /// What the player has cleared. Only levels that stood are stored.
 class Progress {
-  const Progress(this.records);
+  const Progress(this.records, {this.lastLevel = 12});
 
   final Map<int, LevelRecord> records;
+
+  /// How many levels this game mode has.
+  final int lastLevel;
 
   static const Progress empty = Progress({});
 
@@ -22,35 +23,42 @@ class Progress {
   bool get hasPlayed => records.isNotEmpty;
 
   bool get allCleared =>
-      List.generate(_lastLevel, (i) => i + 1).every(records.containsKey);
+      List.generate(lastLevel, (i) => i + 1).every(records.containsKey);
 
   /// Lowest uncleared level, or the last level when all are cleared.
   int get nextLevel {
-    for (var n = 1; n <= _lastLevel; n++) {
+    for (var n = 1; n <= lastLevel; n++) {
       if (!records.containsKey(n)) return n;
     }
-    return _lastLevel;
+    return lastLevel;
   }
 
   bool isUnlocked(int number) =>
-      number >= 1 && number <= _lastLevel && number <= nextLevel;
+      number >= 1 && number <= lastLevel && number <= nextLevel;
 
   /// Returns this when the tower fell. Stars and points keep their own bests.
   Progress withResult(AttemptResult result) {
     if (!result.stood) return this;
-    final number = result.level.number;
+    return withCleared(result.level.number,
+        stars: result.stars, points: result.points);
+  }
+
+  /// Records a cleared level, keeping the best stars and best points.
+  Progress withCleared(int number, {required int stars, required int points}) {
     final old = records[number];
-    final stars = old == null || result.stars > old.stars
-        ? result.stars
-        : old.stars;
-    final points = old == null || result.points > old.bestPoints
-        ? result.points
-        : old.bestPoints;
     return Progress({
       ...records,
-      number: LevelRecord(stars: stars, bestPoints: points),
-    });
+      number: LevelRecord(
+        stars: old == null || stars > old.stars ? stars : old.stars,
+        bestPoints:
+            old == null || points > old.bestPoints ? points : old.bestPoints,
+      ),
+    }, lastLevel: lastLevel);
   }
+
+  /// The same records for a mode with [lastLevel] levels.
+  Progress withLastLevel(int lastLevel) =>
+      lastLevel == this.lastLevel ? this : Progress(records, lastLevel: lastLevel);
 }
 
 /// 1240 -> '1,240'.

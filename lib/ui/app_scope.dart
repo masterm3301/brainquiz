@@ -8,12 +8,17 @@ class AppScope extends InheritedWidget {
   const AppScope({
     super.key,
     required this.progress,
+    required this.memoryProgress,
     required this.ads,
     required this.newSeed,
     required super.child,
   });
 
+  /// Wind Levels progress.
   final ProgressController progress;
+
+  /// Memory Towers progress.
+  final ProgressController memoryProgress;
   final RewardedAds ads;
   final int Function() newSeed;
 
@@ -25,5 +30,8 @@ class AppScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(AppScope old) =>
-      progress != old.progress || ads != old.ads || newSeed != old.newSeed;
+      progress != old.progress ||
+      memoryProgress != old.memoryProgress ||
+      ads != old.ads ||
+      newSeed != old.newSeed;
 }

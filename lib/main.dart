@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'ads/admob_rewarded_ads.dart';
 import 'ads/rewarded_ads.dart';
 import 'app.dart';
+import 'memory/memory_levels.dart';
 import 'progress/progress_controller.dart';
 import 'progress/progress_store.dart';
 import 'ui/app_scope.dart';
@@ -25,7 +26,11 @@ Future<void> main() async {
   ));
 
   final progress = ProgressController(SharedPrefsProgressStore());
-  await progress.load();
+  final memoryProgress = ProgressController(
+    SharedPrefsProgressStore.memory(memoryLevels.length),
+    lastLevel: memoryLevels.length,
+  );
+  await Future.wait([progress.load(), memoryProgress.load()]);
 
   final onMobile = defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;
@@ -35,6 +40,7 @@ Future<void> main() async {
 
   runApp(AppScope(
     progress: progress,
+    memoryProgress: memoryProgress,
     ads: ads,
     newSeed: () => DateTime.now().microsecondsSinceEpoch,
     child: const TowerBuildApp(home: MenuScreen()),

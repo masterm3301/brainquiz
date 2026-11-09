@@ -1,5 +1,6 @@
 import 'package:brainquiz/ads/rewarded_ads.dart';
 import 'package:brainquiz/app.dart';
+import 'package:brainquiz/memory/memory_levels.dart';
 import 'package:brainquiz/progress/progress.dart';
 import 'package:brainquiz/progress/progress_controller.dart';
 import 'package:brainquiz/progress/progress_store.dart';
@@ -41,12 +42,20 @@ Future<void> pumpApp(
   int Function()? newSeed,
   Widget? home,
   ProgressStore? store,
+  Progress memoryProgress = Progress.empty,
+  ProgressStore? memoryStore,
 }) async {
   await loadNunito();
   final controller = ProgressController(store ?? MemoryProgressStore(progress));
   await controller.load();
+  final memory = ProgressController(
+    memoryStore ?? MemoryProgressStore(memoryProgress),
+    lastLevel: memoryLevels.length,
+  );
+  await memory.load();
   await t.pumpWidget(AppScope(
     progress: controller,
+    memoryProgress: memory,
     ads: ads ?? NoAds(),
     newSeed: newSeed ?? () => 42,
     child: TowerBuildApp(home: home ?? const MenuScreen()),

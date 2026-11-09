@@ -3,6 +3,7 @@ import 'package:brainquiz/app.dart';
 import 'package:brainquiz/game/block.dart';
 import 'package:brainquiz/game/levels.dart';
 import 'package:brainquiz/game/tower_generator.dart';
+import 'package:brainquiz/memory/memory_levels.dart';
 import 'package:brainquiz/progress/progress_controller.dart';
 import 'package:brainquiz/progress/progress_store.dart';
 import 'package:brainquiz/ui/app_scope.dart';
@@ -67,6 +68,10 @@ void main() {
     await t.pumpWidget(
       AppScope(
         progress: progress,
+        memoryProgress: ProgressController(
+          SharedPrefsProgressStore.memory(memoryLevels.length),
+          lastLevel: memoryLevels.length,
+        ),
         ads: NoAds(),
         newSeed: () => _seed,
         child: const TowerBuildApp(home: MenuScreen()),
@@ -74,7 +79,7 @@ void main() {
     );
     await t.pump();
 
-    await t.tap(find.text('Play'));
+    await t.tap(find.byKey(const ValueKey('wind-play')));
     await waitFor(t, find.text('Memorise the tower'));
     expect(find.text('Level 1 of 12'), findsOneWidget);
 

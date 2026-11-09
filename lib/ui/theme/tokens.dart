@@ -22,4 +22,11 @@ abstract final class AppColors {
   static const borderStood = Color(0xFF1C3A28);
   static const borderFell = Color(0xFF2A1A1C);
   static const transparent = Color(0x00000000);
+
+  // Memory Towers cubes, in the order levels unlock them.
+  static const cubeBlue = Color(0xFF3B82F6);
+  static const cubePurple = Color(0xFFA855F7);
+  static const cubeOrange = Color(0xFFFF8A1F);
+  static const cubePink = Color(0xFFFF4FA3);
+  static const cubeEmpty = Color(0xFF0E1424);
 }

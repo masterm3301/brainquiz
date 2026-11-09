@@ -11,6 +11,8 @@ class StudyClock {
   void step(double dt) => _elapsed += clampedDt(dt);
 
   int get secondsLeft => (seconds - _elapsed).ceil().clamp(0, seconds);
+  /// Full seconds still unused, rounding down.
+  int get wholeSecondsLeft => (seconds - _elapsed).floor().clamp(0, seconds);
   double get fractionLeft => (1 - _elapsed / seconds).clamp(0.0, 1.0);
   bool get done => _elapsed >= seconds;
 }

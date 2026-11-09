@@ -1,10 +1,18 @@
 # Tower Build
 
-A dark, neon, 2D memory game for Android and iOS. A tower of coloured blocks
-is shown for a few seconds. Rebuild it from memory by dragging blocks from the
-tray, lock it, and see whether it stands against the wind. Rewarded ads are the
-only ads, and both are optional: "See the tower again" on the build screen
-replays the tower, and an extra brace is offered before the wind starts.
+A dark, neon, 2D memory game for Android and iOS, with two games picked from
+the home screen. Each keeps its own levels and saved progress.
+
+- **Memory Towers** (22 levels): towers of coloured cubes are shown with a
+  countdown. Rebuild them by tapping colours, bottom to top, left tower first.
+  Tap any placed cube to change it. Level 1 has 5 cubes, then +2 a level for 7
+  levels, +5 for the next 7 and +7 for the last 7 (103 cubes). Three quarters
+  right clears a level; every cube right earns 3 stars. No wind.
+- **Wind Levels** (12 levels): a tower of odd-shaped blocks is shown for a few
+  seconds. Rebuild it from memory by dragging blocks from the tray, lock it,
+  and see whether it stands against the wind. Rewarded ads are the only ads,
+  and both are optional: "See the tower again" on the build screen replays the
+  tower, and an extra brace is offered before the wind starts.
 
 Portrait only, dark only, no sound, no accounts, no backend. Progress is saved
 on the device.

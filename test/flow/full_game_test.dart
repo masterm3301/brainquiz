@@ -24,7 +24,7 @@ Future<void> playLevelOneFromMenu(WidgetTester t, {bool noAdText = false}) async
   }
 
   checkAds();
-  await t.tap(find.text('Play'));
+  await t.tap(find.byKey(const ValueKey('wind-play')));
   await t.pumpAndSettle(const Duration(milliseconds: 50));
   checkAds();
   await pumpSeconds(t, levels[0].studySeconds);
@@ -49,7 +49,7 @@ void main() {
       phone(t);
       SharedPreferences.setMockInitialValues({});
       await pumpApp(t, store: SharedPrefsProgressStore(), ads: FakeAds());
-      expect(find.text('Play'), findsOneWidget);
+      expect(find.text('Play'), findsNWidgets(2));
 
       await playLevelOneFromMenu(t);
       final total = AppScope.of(t.element(find.byType(Scaffold).first))

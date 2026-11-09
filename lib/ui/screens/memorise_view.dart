@@ -226,6 +226,8 @@ class StudyClockTicker {
 
   void start() => _ticker.start();
 
+  void stop() => _ticker.stop();
+
   void _tick(Duration elapsed) {
     clock.step((elapsed - _last).inMicroseconds / 1e6);
     _last = elapsed;
