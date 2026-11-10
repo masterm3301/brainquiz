@@ -42,6 +42,13 @@ class AdIds {
 }
 
 /// The single place to change ad content rating and personalization.
+///
+/// The Play target audience is 13 and over, so the app is not child
+/// directed: requests set no child-directed or under-age-of-consent tag
+/// (setting either would wrongly limit ads for an adult audience). Ads are
+/// capped at teen content to suit the youngest players in that audience,
+/// and stay non-personalized; Google's UMP form still handles consent where
+/// the law requires it.
 class AdPolicy {
   const AdPolicy._();
 

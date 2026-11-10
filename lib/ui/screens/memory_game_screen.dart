@@ -8,6 +8,7 @@ import '../app_scope.dart';
 import '../theme/text.dart';
 import '../theme/tokens.dart';
 import '../widgets/arena.dart';
+import '../widgets/game_button.dart';
 import '../widgets/cube_tower.dart';
 import '../widgets/ad_offer.dart';
 import '../widgets/level_row.dart' show StarRow;
@@ -382,7 +383,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
         ),
       ),
       const SizedBox(height: 10),
-      _ActionButton(
+      GameButton.primary(
         "I'm ready",
         key: const ValueKey('memory-ready'),
         height: buttonHeight,
@@ -409,25 +410,22 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(
-              flex: 2,
-              child: _ActionButton(
-                'Undo',
-                key: const ValueKey('memory-undo'),
-                height: buttonHeight,
-                outline: true,
-                onPressed: round.canUndo && !busy ? round.undo : null,
-              ),
+            GameButton.icon(
+              GameIcon.undo,
+              key: const ValueKey('memory-undo'),
+              semanticLabel: 'Undo',
+              height: buttonHeight,
+              onPressed: round.canUndo && !busy ? round.undo : null,
             ),
             if (offerPeek) ...[
               const SizedBox(width: 10),
               Expanded(
-                flex: 2,
-                child: _ActionButton(
+                flex: 4,
+                child: GameButton.secondary(
                   'Peek',
                   key: const ValueKey('memory-peek'),
+                  icon: GameIcon.eye,
                   height: buttonHeight,
-                  outline: true,
                   adBadge: true,
                   onPressed: busy ? null : _peek,
                 ),
@@ -435,11 +433,11 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
             ],
             const SizedBox(width: 10),
             Expanded(
-              flex: 3,
-              child: _ActionButton(
+              flex: 5,
+              child: GameButton.primary(
                 round.complete
                     ? 'Check'
-                    : '${round.filled} of ${round.level.cubes}',
+                    : 'Check · ${round.level.cubes - round.filled} left',
                 key: const ValueKey('memory-check'),
                 height: buttonHeight,
                 onPressed: round.complete && !busy ? _check : null,
@@ -463,68 +461,64 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
       children: [
         SizedBox(
           height: 52,
-          child: Row(
-            children: [
-              if (!offerRetry) ...[
-                StarRow(stars: result.stars, size: 22),
-                const SizedBox(width: 14),
-              ],
-              Expanded(
-                child: Text(
-                  result.passed
-                      ? result.perfect
-                            ? result.stars == 3
-                                  ? 'Every cube right.'
-                                  : 'Every cube right. Ad help caps it at '
-                                        '$adHelpStars stars.'
-                            : 'Wrong cubes show the right colour inside.'
-                      : 'You need $need right to clear this level.',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: nunito(
-                    13,
-                    weight: 700,
-                    color: AppColors.textTertiary,
-                    height: 1.3,
-                  ),
-                ),
-              ),
-              if (offerRetry) ...[
-                const SizedBox(width: 10),
-                _ActionButton(
-                  'Same tower',
+          child: offerRetry
+              ? GameButton.secondary(
+                  'Retry the same tower',
                   key: const ValueKey('memory-retry-ad'),
-                  height: 44,
-                  outline: true,
+                  icon: GameIcon.retry,
+                  height: 52,
                   adBadge: true,
-                  fontSize: 15,
                   onPressed: _adShowing ? null : _retrySameTower,
+                )
+              : Row(
+                  children: [
+                    StarRow(stars: result.stars, size: 22),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        result.passed
+                            ? result.perfect
+                                  ? result.stars == 3
+                                        ? 'Every cube right.'
+                                        : 'Every cube right. Ad help caps '
+                                              'it at $adHelpStars stars.'
+                                  : 'Wrong cubes show the right colour '
+                                        'inside.'
+                            : 'You need $need right to clear this level.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: nunito(
+                          13,
+                          weight: 700,
+                          color: AppColors.textTertiary,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                    if (result.passed) ...[
+                      const SizedBox(width: 10),
+                      Text(
+                        '+${formatPoints(result.points)}',
+                        style: nunito(
+                          20,
+                          weight: 900,
+                          color: AppColors.green,
+                        ).copyWith(shadows: _glow(AppColors.green, 14)),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-              if (result.passed) ...[
-                const SizedBox(width: 10),
-                Text(
-                  '+${formatPoints(result.points)}',
-                  style: nunito(
-                    20,
-                    weight: 900,
-                    color: AppColors.green,
-                  ).copyWith(shadows: _glow(AppColors.green, 14)),
-                ),
-              ],
-            ],
-          ),
         ),
         const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               flex: 2,
-              child: _ActionButton(
+              child: GameButton.secondary(
                 result.passed ? 'Again' : 'Levels',
                 key: const ValueKey('memory-secondary'),
+                icon: result.passed ? GameIcon.retry : GameIcon.grid,
                 height: buttonHeight,
-                outline: true,
                 onPressed: _adShowing
                     ? null
                     : result.passed
@@ -535,7 +529,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
             const SizedBox(width: 10),
             Expanded(
               flex: 3,
-              child: _ActionButton(
+              child: GameButton.primary(
                 !result.passed
                     ? 'Try again'
                     : last
@@ -673,81 +667,4 @@ class _Palette extends StatelessWidget {
       ],
     ),
   );
-}
-
-/// A fixed-height button, so the controls take the same room in every phase.
-class _ActionButton extends StatelessWidget {
-  const _ActionButton(
-    this.text, {
-    super.key,
-    required this.height,
-    required this.onPressed,
-    this.outline = false,
-    this.adBadge = false,
-    this.fontSize = 18,
-  });
-
-  final String text;
-  final double height;
-  final VoidCallback? onPressed;
-  final bool outline;
-
-  /// Marks a button that plays a rewarded ad.
-  final bool adBadge;
-  final double fontSize;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: adBadge ? '$text, watch an ad' : text,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.4,
-          child: Container(
-            height: height,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: outline ? null : AppColors.green,
-              border: outline
-                  ? Border.all(color: AppColors.green, width: 2)
-                  : null,
-              boxShadow: outline || !enabled
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: AppColors.green.withValues(alpha: 0.45),
-                        blurRadius: 26,
-                      ),
-                    ],
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    text,
-                    maxLines: 1,
-                    style: nunito(
-                      fontSize,
-                      weight: 900,
-                      color: outline ? AppColors.green : AppColors.onGreen,
-                    ),
-                  ),
-                  if (adBadge) ...[const SizedBox(width: 6), const AdBadge()],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

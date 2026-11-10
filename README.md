@@ -40,10 +40,10 @@ flutter test
 flutter analyze
 ```
 
-To regenerate the launcher icon:
+The launcher icon's source is `assets/icon/icon.png` (512×512). After
+replacing it, regenerate the Android (including adaptive) and iOS icons:
 
 ```bash
-flutter test test/visual/render_icon_test.dart
 dart run flutter_launcher_icons
 ```
 

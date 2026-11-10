@@ -43,8 +43,13 @@ abstract final class MenuColors {
   static const memoryAccent = Color(0xFF2BE07A);
   static const windAccent = Color(0xFF5CC8FF);
 
+  /// The round's primary button, and its dim disabled fill.
+  static const action = Color(0xFF6DDD84);
+  static const actionDisabled = Color(0xFF13251D);
+
   /// White at [alpha], for outlines and glass fills.
-  static Color white(double alpha) => const Color(0xFFFFFFFF).withValues(alpha: alpha);
+  static Color white(double alpha) =>
+      const Color(0xFFFFFFFF).withValues(alpha: alpha);
 
   /// One colour per cleared level, repeating up the tower.
   static const levels = [

@@ -87,11 +87,20 @@ class AdBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.yellow, width: 1.5),
+        border: Border.all(color: MenuColors.star, width: 1.5),
+        borderRadius: BorderRadius.circular(5),
       ),
-      child: Text('AD', style: label(size: 10, color: AppColors.yellow)),
+      child: Text(
+        'AD',
+        style: manrope(
+          10,
+          weight: 800,
+          color: MenuColors.star,
+          letterSpacing: 0.8,
+        ),
+      ),
     ),
   );
 }

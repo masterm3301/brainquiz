@@ -16,6 +16,12 @@ const developerBio =
 /// The developer's GitHub profile, linked under "Made by".
 final developerGithub = Uri.parse('https://github.com/masterm3301');
 
+/// The privacy policy, linked from the About screen and in Play Console.
+/// Play's User Data policy needs it inside the app because ads use the
+/// advertising ID. Also entered in Play Console.
+const privacyPolicyUrl =
+    'https://sites.google.com/view/certaindeath/privacy-policy';
+
 /// Opens [url] outside the app. Tests swap it for a fake.
 typedef LinkOpener = Future<bool> Function(Uri url);
 
@@ -50,7 +56,7 @@ class AboutScreen extends StatelessWidget {
           const _Section('Top memory recallers', child: _RankingSoon()),
           _Section('Made by', child: _Developer(openLink)),
           const _Section('Progress', child: _ResetProgress()),
-          const _PrivacyOptions(),
+          _Section('Privacy', child: _Privacy(openLink)),
         ],
       ),
     ),
@@ -103,8 +109,10 @@ class _RankingSoon extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.yellow, width: 1.5),
         ),
-        child: Text('Coming soon'.toUpperCase(),
-            style: label(size: 10, color: AppColors.yellow)),
+        child: Text(
+          'Coming soon'.toUpperCase(),
+          style: label(size: 10, color: AppColors.yellow),
+        ),
       ),
       const SizedBox(height: 10),
       Text(
@@ -127,53 +135,70 @@ class _Developer extends StatelessWidget {
     children: [
       Text(developerBio, style: _body()),
       const SizedBox(height: 14),
-      Semantics(
-        link: true,
-        label: 'GitHub, ${developerGithub.host}${developerGithub.path}',
-        excludeSemantics: true,
-        child: GestureDetector(
-          key: const ValueKey('about-github'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _open(context),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.green, width: 2),
-            ),
-            child: Row(
-              children: [
-                Text('GitHub', style: nunito(16, weight: 900)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${developerGithub.host}${developerGithub.path}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: nunito(14, weight: 800, color: AppColors.green),
-                  ),
-                ),
-                const _Chevron(),
-              ],
-            ),
-          ),
-        ),
+      _LinkTile(
+        'GitHub',
+        developerGithub,
+        key: const ValueKey('about-github'),
+        openLink: openLink,
       ),
     ],
+  );
+}
+
+/// An outlined row that opens [url] outside the app, with a snackbar when
+/// nothing can open it.
+class _LinkTile extends StatelessWidget {
+  const _LinkTile(this.title, this.url, {super.key, required this.openLink});
+
+  final String title;
+  final Uri url;
+  final LinkOpener openLink;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    link: true,
+    label: '$title, ${url.host}${url.path}',
+    excludeSemantics: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _open(context),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.green, width: 2),
+        ),
+        child: Row(
+          children: [
+            Text(title, style: nunito(16, weight: 900)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${url.host}${url.path}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: nunito(14, weight: 800, color: AppColors.green),
+              ),
+            ),
+            const _Chevron(),
+          ],
+        ),
+      ),
+    ),
   );
 
   Future<void> _open(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     var opened = false;
     try {
-      opened = await openLink(developerGithub);
+      opened = await openLink(url);
     } catch (_) {}
     if (!opened) {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: AppColors.panel,
           content: Text(
-            'Could not open the link. Visit $developerGithub',
+            'Could not open the link. Visit $url',
             style: nunito(14, weight: 700, color: AppColors.textSecondary),
           ),
         ),
@@ -225,7 +250,10 @@ class _HowToPlayDropdownState extends State<_HowToPlayDropdown> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('How to play', style: nunito(18, weight: 900)),
+                      child: Text(
+                        'How to play',
+                        style: nunito(18, weight: 900),
+                      ),
                     ),
                     AnimatedRotation(
                       turns: _open ? 0.5 : 0,
@@ -254,26 +282,48 @@ class _HowToPlayDropdownState extends State<_HowToPlayDropdown> {
   );
 }
 
-/// The ad consent form, when the player's region requires one.
-class _PrivacyOptions extends StatelessWidget {
-  const _PrivacyOptions();
+/// The privacy policy, and the ad consent form when the player's region
+/// requires one.
+class _Privacy extends StatelessWidget {
+  const _Privacy(this.openLink);
+
+  final LinkOpener openLink;
 
   @override
   Widget build(BuildContext context) {
     final ads = AppScope.of(context).ads;
-    return ValueListenableBuilder<bool>(
-      valueListenable: ads.privacyOptionsRequired,
-      builder: (context, required, _) => !required
-          ? const SizedBox.shrink()
-          : _Section(
-              'Privacy',
-              child: NeonButton.outline(
-                'Privacy options',
-                key: const ValueKey('about-privacy'),
-                color: AppColors.textSecondary,
-                onPressed: ads.showPrivacyOptions,
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Ads are optional and only play when you choose to watch one. '
+          'They are served by Google AdMob, which uses your device\'s '
+          'advertising ID.',
+          style: _body(),
+        ),
+        const SizedBox(height: 14),
+        if (privacyPolicyUrl.isNotEmpty)
+          _LinkTile(
+            'Privacy policy',
+            Uri.parse(privacyPolicyUrl),
+            key: const ValueKey('about-privacy-policy'),
+            openLink: openLink,
+          ),
+        ValueListenableBuilder<bool>(
+          valueListenable: ads.privacyOptionsRequired,
+          builder: (context, required, _) => !required
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: NeonButton.outline(
+                    'Privacy options',
+                    key: const ValueKey('about-privacy'),
+                    color: AppColors.textSecondary,
+                    onPressed: ads.showPrivacyOptions,
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }

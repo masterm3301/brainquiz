@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- AdMob reads the advertising ID. The Ads SDK merges this permission in
+         already; declaring it here keeps it if a dependency ever drops it.
+         Play Console: "Does your app use an advertising ID?" = Yes. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <application
         android:label="Tower Build"
         android:name="${applicationName}"

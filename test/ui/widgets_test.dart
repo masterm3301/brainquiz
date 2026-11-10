@@ -87,7 +87,7 @@ void main() {
         ),
       ),
     ));
-    await t.pump(const Duration(milliseconds: 1500));
+    await t.pump(const Duration(milliseconds: 2100));
     expect(key.currentState!.controller.value, 1);
     key.currentState!.replay();
     await t.pump(const Duration(milliseconds: 100));

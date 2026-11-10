@@ -57,6 +57,11 @@ flutter_launcher_icons:
   ios: true
   image_path: assets/icon/icon.png
   remove_alpha_ios: true
+  # Android 8+: the art on the icon's own dark colour, inset so round and
+  # squircle masks never clip the top cube.
+  adaptive_icon_background: "#05070D"
+  adaptive_icon_foreground: assets/icon/icon.png
+  adaptive_icon_foreground_inset: 16
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -2,4 +2,5 @@
 <resources>
     <!-- Same value as AppColors.background in lib/ui/theme/tokens.dart -->
     <color name="app_background">#FF05070D</color>
+	<color name="ic_launcher_background">#05070D</color>
 </resources>
