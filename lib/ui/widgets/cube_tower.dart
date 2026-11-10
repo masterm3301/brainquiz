@@ -40,12 +40,16 @@ class CubeTower extends StatefulWidget {
     this.cursor,
     this.answer,
     this.onTapCube,
+    this.maxColumns,
   });
 
   final List<int?> cubes;
   final int? cursor;
   final List<int>? answer;
   final ValueChanged<int>? onTapCube;
+
+  /// Caps how many towers the cubes split into; 1 keeps a single tower.
+  final int? maxColumns;
 
   @override
   State<CubeTower> createState() => _CubeTowerState();
@@ -73,14 +77,22 @@ class _CubeTowerState extends State<CubeTower> with TickerProviderStateMixin {
   void didUpdateWidget(CubeTower old) {
     super.didUpdateWidget(old);
     _syncPulse();
-    // Animate the one slot that just got a new colour.
+    // Animate a cube only when it is the one slot that just got a new
+    // colour; a whole tower swapping in (a peek) appears at once.
     if (old.cubes.length == widget.cubes.length) {
+      int? changed;
+      var count = 0;
       for (var i = 0; i < widget.cubes.length; i++) {
-        if (widget.cubes[i] != null && old.cubes[i] != widget.cubes[i]) {
-          _dropped = i;
-          _drop.forward(from: 0);
-          break;
+        if (old.cubes[i] != widget.cubes[i]) {
+          changed = i;
+          count++;
         }
+      }
+      if (count == 1 && widget.cubes[changed!] != null) {
+        _dropped = changed;
+        _drop.forward(from: 0);
+      } else if (count > 1) {
+        _dropped = null;
       }
     }
   }
@@ -107,6 +119,7 @@ class _CubeTowerState extends State<CubeTower> with TickerProviderStateMixin {
         final layout = CubeLayout(
           widget.cubes.length,
           Size(c.maxWidth, c.maxHeight - _floor),
+          maxColumns: widget.maxColumns,
         );
         final placed = widget.cubes.where((x) => x != null).length;
         return Semantics(
@@ -180,7 +193,7 @@ class _CubePainter extends CustomPainter {
           );
         }
         final right = answer == null || answer![i] == index;
-        _paintCube(canvas, rect, radius, cubeColors[index], dim: !right);
+        paintCube(canvas, rect, cubeColors[index], dim: !right);
         if (!right) _paintMiss(canvas, rect, radius, cubeColors[answer![i]]);
       }
       if (i == cursor) _paintCursor(canvas, rect, radius);
@@ -212,57 +225,6 @@ class _CubePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
         ..color = AppColors.dashed,
-    );
-  }
-
-  void _paintCube(
-    Canvas canvas,
-    Rect rect,
-    Radius radius,
-    Color color, {
-    bool dim = false,
-  }) {
-    final r = RRect.fromRectAndRadius(rect, radius);
-    final alpha = dim ? 0.3 : 1.0;
-    if (!dim) {
-      canvas.drawRRect(
-        r,
-        Paint()
-          ..color = color.withValues(alpha: 0.35)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, rect.width * 0.18),
-      );
-    }
-    canvas.drawRRect(r, Paint()..color = color.withValues(alpha: alpha));
-    // A lit top face and a shaded base, so each cube reads as a block.
-    final top = Rect.fromLTWH(
-      rect.left,
-      rect.top,
-      rect.width,
-      rect.height * 0.2,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndCorners(top, topLeft: radius, topRight: radius),
-      Paint()
-        ..color = Color.lerp(
-          color,
-          AppColors.text,
-          0.35,
-        )!.withValues(alpha: alpha),
-    );
-    final base = Rect.fromLTWH(
-      rect.left,
-      rect.bottom - rect.height * 0.14,
-      rect.width,
-      rect.height * 0.14,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndCorners(base, bottomLeft: radius, bottomRight: radius),
-      Paint()
-        ..color = Color.lerp(
-          color,
-          AppColors.background,
-          0.3,
-        )!.withValues(alpha: alpha),
     );
   }
 
@@ -314,4 +276,46 @@ class _CubePainter extends CustomPainter {
     }
     return true;
   }
+}
+
+/// One glowing cube in [rect]: a lit top face and a shaded base, so it
+/// reads as a block. [dim] fades it and drops the glow.
+void paintCube(Canvas canvas, Rect rect, Color color, {bool dim = false}) {
+  final radius = Radius.circular(rect.width * 0.08);
+  final r = RRect.fromRectAndRadius(rect, radius);
+  final alpha = dim ? 0.3 : 1.0;
+  if (!dim) {
+    canvas.drawRRect(
+      r,
+      Paint()
+        ..color = color.withValues(alpha: 0.35)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, rect.width * 0.18),
+    );
+  }
+  canvas.drawRRect(r, Paint()..color = color.withValues(alpha: alpha));
+  final top = Rect.fromLTWH(rect.left, rect.top, rect.width, rect.height * 0.2);
+  canvas.drawRRect(
+    RRect.fromRectAndCorners(top, topLeft: radius, topRight: radius),
+    Paint()
+      ..color = Color.lerp(
+        color,
+        AppColors.text,
+        0.35,
+      )!.withValues(alpha: alpha),
+  );
+  final base = Rect.fromLTWH(
+    rect.left,
+    rect.bottom - rect.height * 0.14,
+    rect.width,
+    rect.height * 0.14,
+  );
+  canvas.drawRRect(
+    RRect.fromRectAndCorners(base, bottomLeft: radius, bottomRight: radius),
+    Paint()
+      ..color = Color.lerp(
+        color,
+        AppColors.background,
+        0.3,
+      )!.withValues(alpha: alpha),
+  );
 }

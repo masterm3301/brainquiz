@@ -5,6 +5,7 @@ import '../app_scope.dart';
 import '../theme/text.dart';
 import '../theme/tokens.dart';
 import '../widgets/level_row.dart';
+import '../widgets/neon_button.dart';
 import 'attempt_flow.dart';
 
 /// Small "back" control in the sheet's caption style.
@@ -51,6 +52,26 @@ class LevelsScreen extends StatelessWidget {
                   'the wind.',
                   style: nunito(14,
                       weight: 700, color: AppColors.textTertiary, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  progressStatus(progress),
+                  key: const ValueKey('wind-status'),
+                  style: nunito(13,
+                      weight: 900,
+                      color: progress.hasPlayed
+                          ? AppColors.textSecondary
+                          : AppColors.label),
+                ),
+                const SizedBox(height: 10),
+                NeonButton.primary(
+                  playLabel(progress),
+                  key: const ValueKey('wind-play'),
+                  color: AppColors.cyan,
+                  onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                          builder: (_) => AttemptFlow(
+                              levelNumber: progress.nextLevel))),
                 ),
                 const SizedBox(height: 20),
                 Container(

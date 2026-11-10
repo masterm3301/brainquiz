@@ -30,3 +30,30 @@ abstract final class AppColors {
   static const cubePink = Color(0xFFFF4FA3);
   static const cubeEmpty = Color(0xFF0E1424);
 }
+
+/// The home screen's palette, from the menu design.
+abstract final class MenuColors {
+  static const text = Color(0xFFF4F7FB);
+  static const muted = Color(0xFF9AA6B8);
+  static const faint = Color(0xFF8A96A8);
+  static const icon = Color(0xFFC9D2DF);
+  static const star = Color(0xFFFFD23F);
+  static const onAccent = Color(0xFF212121);
+  static const card = Color(0xE60D121C);
+  static const memoryAccent = Color(0xFF2BE07A);
+  static const windAccent = Color(0xFF5CC8FF);
+
+  /// White at [alpha], for outlines and glass fills.
+  static Color white(double alpha) => const Color(0xFFFFFFFF).withValues(alpha: alpha);
+
+  /// One colour per cleared level, repeating up the tower.
+  static const levels = [
+    Color(0xFF3D8BFF),
+    Color(0xFFFF4D5E),
+    Color(0xFFFFD23F),
+    Color(0xFF2BE07A),
+    Color(0xFFB26BFF),
+  ];
+
+  static Color level(int number) => levels[(number - 1) % levels.length];
+}

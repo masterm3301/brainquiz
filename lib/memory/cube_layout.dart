@@ -3,7 +3,7 @@ import 'dart:ui';
 
 /// Where each cube sits: towers side by side, each filled bottom to top,
 /// left tower first. The column count is the one giving the largest cubes
-/// that fit [area].
+/// that fit [area], never more than [maxColumns].
 class CubeLayout {
   CubeLayout._(this.cube, this.gap, this.columnHeights, this.origin);
 
@@ -12,13 +12,14 @@ class CubeLayout {
     Size area, {
     double columnGap = 0.22,
     double maxCube = 72,
+    int? maxColumns,
   }) {
     if (count <= 0 || area.isEmpty) {
       return CubeLayout._(0, 0, const [], Offset.zero);
     }
     var bestSize = 0.0;
     var bestColumns = 1;
-    for (var columns = 1; columns <= count; columns++) {
+    for (var columns = 1; columns <= (maxColumns ?? count); columns++) {
       final rows = (count / columns).ceil();
       // Gaps between towers are a share of the cube, so solve for both.
       final byWidth = area.width / (columns + (columns - 1) * columnGap);

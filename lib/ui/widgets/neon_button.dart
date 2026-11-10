@@ -4,9 +4,10 @@ import '../theme/text.dart';
 import '../theme/tokens.dart';
 
 class NeonButton extends StatelessWidget {
-  const NeonButton.primary(this.label, {super.key, this.onPressed})
+  const NeonButton.primary(this.label,
+      {super.key, this.onPressed, Color? color})
       : _outline = false,
-        color = AppColors.green;
+        color = color ?? AppColors.green;
   const NeonButton.outline(this.label,
       {super.key, this.onPressed, Color? color})
       : _outline = true,

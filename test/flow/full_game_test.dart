@@ -24,6 +24,9 @@ Future<void> playLevelOneFromMenu(WidgetTester t, {bool noAdText = false}) async
   }
 
   checkAds();
+  await t.tap(find.byKey(const ValueKey('mode-wind')));
+  await t.pumpAndSettle();
+  checkAds();
   await t.tap(find.byKey(const ValueKey('wind-play')));
   await t.pumpAndSettle(const Duration(milliseconds: 50));
   checkAds();
@@ -49,7 +52,8 @@ void main() {
       phone(t);
       SharedPreferences.setMockInitialValues({});
       await pumpApp(t, store: SharedPrefsProgressStore(), ads: FakeAds());
-      expect(find.text('Play'), findsNWidgets(2));
+      expect(find.text('Play level 1'), findsOneWidget,
+          reason: 'Memory Towers');
 
       await playLevelOneFromMenu(t);
       final total = AppScope.of(t.element(find.byType(Scaffold).first))
@@ -61,14 +65,17 @@ void main() {
       await t.binding.handlePopRoute();
       await t.pumpAndSettle(const Duration(milliseconds: 50));
       expect(find.byType(MenuScreen), findsOneWidget);
-      expect(find.text('Continue level 2'), findsOneWidget);
+      expect(find.text('Play level 2'), findsOneWidget);
       expect(find.text(formatPoints(total)), findsOneWidget);
+      expect(find.textContaining('1/12'), findsOneWidget);
 
       // "Close the app": a new controller and store over the same saved data.
       await t.pumpWidget(const SizedBox());
       await pumpApp(t, store: SharedPrefsProgressStore(), ads: FakeAds());
-      expect(find.text('Continue level 2'), findsOneWidget);
       expect(find.text(formatPoints(total)), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('mode-wind')));
+      await t.pumpAndSettle();
+      expect(find.text('Play level 2'), findsOneWidget);
     },
   );
 

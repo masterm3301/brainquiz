@@ -479,7 +479,9 @@ void main() {
       t,
     ) async {
       await pumpApp(t, progress: level12);
-      await t.tap(find.text('Continue level 12'));
+      await t.tap(find.byKey(const ValueKey('mode-wind')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Play level 12'));
       await t.pump();
       await t.pump(const Duration(milliseconds: 16));
       final enter = ModalRoute.of(t.element(find.byType(MemoriseView)))!.animation!;
@@ -503,12 +505,14 @@ void main() {
 
     testWidgets('going back during the transition cleans up', (t) async {
       await pumpApp(t, progress: level12);
-      await t.tap(find.text('Continue level 12'));
+      await t.tap(find.byKey(const ValueKey('mode-wind')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Play level 12'));
       await t.pump();
       await t.pump(const Duration(milliseconds: 100));
       await t.binding.handlePopRoute();
       await t.pumpAndSettle();
-      expect(find.text('Continue level 12'), findsOneWidget);
+      expect(find.text('Play level 12'), findsOneWidget);
       expect(find.byType(MemoriseView), findsNothing);
       expect(t.takeException(), isNull);
     });

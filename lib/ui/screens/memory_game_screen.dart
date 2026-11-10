@@ -9,6 +9,7 @@ import '../theme/text.dart';
 import '../theme/tokens.dart';
 import '../widgets/arena.dart';
 import '../widgets/cube_tower.dart';
+import '../widgets/ad_offer.dart';
 import '../widgets/level_row.dart' show StarRow;
 import 'levels_screen.dart' show BackLabel;
 import 'memorise_view.dart' show StudyClockTicker;
@@ -17,6 +18,10 @@ import 'memory_levels_screen.dart';
 /// Memory Towers: study the cubes, rebuild the colours, see the score.
 /// All three phases share one arena, so the towers never jump between them.
 /// Leaving mid-round records nothing.
+///
+/// Rewarded ads are optional help, offered only when one is loaded: a peek
+/// at the tower while rebuilding, or another go at the same tower after a
+/// miss. Either caps the round at [adHelpStars] stars.
 class MemoryGameScreen extends StatefulWidget {
   const MemoryGameScreen({super.key, required this.levelNumber});
 
@@ -30,6 +35,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
     with TickerProviderStateMixin {
   MemoryRound? _round;
   StudyClockTicker? _clock;
+  StudyClockTicker? _peekClock;
+  bool _adShowing = false;
   bool _waitingForRoute = false;
   Animation<double>? _routeEntering;
 
@@ -60,11 +67,13 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
     }
   }
 
-  MemoryRound _newRound(int number) {
+  MemoryRound _newRound(int number, {int? seed, bool adHelped = false}) {
     final round = MemoryRound(
       level: memoryLevels[number - 1],
-      seed: AppScope.of(context).newSeed(),
+      seed: seed ?? AppScope.of(context).newSeed(),
+      adHelped: adHelped,
     );
+    _stopPeek();
     _clock?.stop();
     _clock?.dispose();
     _clock = StudyClockTicker(
@@ -77,10 +86,11 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
   }
 
   /// A fresh round at [number]. The clock starts at once: no transition.
-  void _begin(int number) {
+  /// With [seed], the same tower again.
+  void _begin(int number, {int? seed, bool adHelped = false}) {
     final old = _round!;
     _waitingForRoute = false;
-    setState(() => _round = _newRound(number));
+    setState(() => _round = _newRound(number, seed: seed, adHelped: adHelped));
     _clock!.start();
     WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
   }
@@ -96,8 +106,62 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
     _round!.place(color);
   }
 
+  void _stopPeek() {
+    _peekClock?.stop();
+    _peekClock?.dispose();
+    _peekClock = null;
+  }
+
+  /// Explains the offer, then plays the ad. True only if it was watched
+  /// to the end.
+  Future<bool> _watchAd(String title, String body) async {
+    if (_adShowing) return false;
+    final ok = await showAdOffer(context, title: title, body: body);
+    if (!ok || !mounted) return false;
+    setState(() => _adShowing = true);
+    final earned = await AppScope.of(context).ads.show();
+    if (!mounted) return false;
+    setState(() => _adShowing = false);
+    return earned;
+  }
+
+  Future<void> _peek() async {
+    final round = _round!;
+    if (!round.canPeek) return;
+    final seconds = round.level.peekSeconds;
+    final earned = await _watchAd(
+      'Peek at the tower',
+      'Watch a short ad to see the whole tower again for $seconds seconds. '
+          'The cubes you placed stay put. This round can then earn at most '
+          '$adHelpStars stars.',
+    );
+    if (!earned || !mounted || round != _round || !round.canPeek) return;
+    round.startPeek();
+    _stopPeek();
+    // A ticker, not a timer: time away from the app does not use up the peek.
+    _peekClock = StudyClockTicker(
+      this,
+      seconds: seconds,
+      onTick: () => setState(() {}),
+      onDone: round.endPeek,
+    )..start();
+  }
+
+  Future<void> _retrySameTower() async {
+    final round = _round!;
+    final earned = await _watchAd(
+      'Same tower again',
+      'Watch a short ad to study and rebuild this exact tower again, '
+          'instead of new colours. Clearing it earns at most '
+          '$adHelpStars stars.',
+    );
+    if (!earned || !mounted || round != _round) return;
+    _begin(round.level.number, seed: round.seed, adHelped: true);
+  }
+
   void _check() {
     HapticFeedback.mediumImpact();
+    _stopPeek();
     final result = _round!.check();
     if (result.passed) {
       AppScope.of(context).memoryProgress.recordCleared(
@@ -121,6 +185,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
     _routeEntering?.removeStatusListener(_onRouteStatus);
     _clock?.stop();
     _clock?.dispose();
+    _stopPeek();
     _round?.dispose();
     super.dispose();
   }
@@ -128,10 +193,12 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
   @override
   Widget build(BuildContext context) {
     final round = _round!;
+    final scope = AppScope.of(context);
     return ListenableBuilder(
       listenable: Listenable.merge([
         round,
-        AppScope.of(context).memoryProgress,
+        scope.memoryProgress,
+        scope.ads.isReady,
       ]),
       builder: (context, _) => _buildRound(context, round),
     );
@@ -144,8 +211,16 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
     final buttonHeight = (34 + 20 * scale).roundToDouble();
     final total = AppScope.of(context).memoryProgress.progress.totalPoints;
     final result = round.result;
+    final peekClock = _peekClock?.clock;
+    final peeking = round.peeking && peekClock != null;
 
     final (title, trailing, bar, barColor) = switch (round.phase) {
+      MemoryPhase.recall when peeking => (
+        'Take a peek',
+        '${peekClock.secondsLeft}',
+        peekClock.fractionLeft,
+        AppColors.green,
+      ),
       MemoryPhase.study => (
         'Remember the colours',
         '${_clock!.clock.secondsLeft}',
@@ -159,7 +234,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
         AppColors.cyan,
       ),
       MemoryPhase.result => (
-        result!.stars == 3
+        result!.perfect
             ? 'Perfect memory'
             : result.passed
             ? 'Level cleared'
@@ -244,17 +319,17 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: CubeTower(
-                      cubes: switch (round.phase) {
-                        MemoryPhase.study => List<int?>.of(round.target),
-                        _ => List<int?>.of(round.placed),
-                      },
-                      cursor: round.phase == MemoryPhase.recall
+                      maxColumns: level.maxColumns,
+                      cubes: round.phase == MemoryPhase.study || peeking
+                          ? List<int?>.of(round.target)
+                          : List<int?>.of(round.placed),
+                      cursor: round.phase == MemoryPhase.recall && !peeking
                           ? round.cursor
                           : null,
                       answer: round.phase == MemoryPhase.result
                           ? round.target
                           : null,
-                      onTapCube: round.phase == MemoryPhase.recall
+                      onTapCube: round.phase == MemoryPhase.recall && !peeking
                           ? round.select
                           : null,
                     ),
@@ -286,8 +361,11 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
           children: [
             Expanded(
               child: Text(
-                'Bottom to top, left tower first. '
-                'Start early for bonus points.',
+                round.level.maxColumns == 1
+                    ? 'Read the tower from the bottom up. '
+                          'Start early for bonus points.'
+                    : 'Bottom to top, left tower first. '
+                          'Start early for bonus points.',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: nunito(
@@ -313,47 +391,73 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
     ],
   );
 
-  Widget _recallControls(MemoryRound round, double buttonHeight) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      SizedBox(
-        height: 52,
-        child: _Palette(colors: round.level.colors, onPick: _place),
-      ),
-      const SizedBox(height: 10),
-      Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: _ActionButton(
-              'Undo',
-              key: const ValueKey('memory-undo'),
-              height: buttonHeight,
-              outline: true,
-              onPressed: round.canUndo ? round.undo : null,
-            ),
+  Widget _recallControls(MemoryRound round, double buttonHeight) {
+    final busy = round.peeking || _adShowing;
+    final offerPeek =
+        !round.peekUsed &&
+        (AppScope.of(context).ads.isReady.value || _adShowing);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 52,
+          child: _Palette(
+            colors: round.level.colors,
+            onPick: busy ? null : _place,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 3,
-            child: _ActionButton(
-              round.complete
-                  ? 'Check'
-                  : '${round.filled} of ${round.level.cubes}',
-              key: const ValueKey('memory-check'),
-              height: buttonHeight,
-              onPressed: round.complete ? _check : null,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: _ActionButton(
+                'Undo',
+                key: const ValueKey('memory-undo'),
+                height: buttonHeight,
+                outline: true,
+                onPressed: round.canUndo && !busy ? round.undo : null,
+              ),
             ),
-          ),
-        ],
-      ),
-    ],
-  );
+            if (offerPeek) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: _ActionButton(
+                  'Peek',
+                  key: const ValueKey('memory-peek'),
+                  height: buttonHeight,
+                  outline: true,
+                  adBadge: true,
+                  onPressed: busy ? null : _peek,
+                ),
+              ),
+            ],
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 3,
+              child: _ActionButton(
+                round.complete
+                    ? 'Check'
+                    : '${round.filled} of ${round.level.cubes}',
+                key: const ValueKey('memory-check'),
+                height: buttonHeight,
+                onPressed: round.complete && !busy ? _check : null,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _resultControls(MemoryResult result, double buttonHeight) {
     final number = result.level.number;
     final last = number >= memoryLevels.length;
-    final need = (result.total * passShare).ceil();
+    final need = rightNeeded(result.total, passPercent);
+    final offerRetry =
+        !result.passed &&
+        (AppScope.of(context).ads.isReady.value || _adShowing);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -361,13 +465,18 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
           height: 52,
           child: Row(
             children: [
-              StarRow(stars: result.stars, size: 22),
-              const SizedBox(width: 14),
+              if (!offerRetry) ...[
+                StarRow(stars: result.stars, size: 22),
+                const SizedBox(width: 14),
+              ],
               Expanded(
                 child: Text(
                   result.passed
-                      ? result.stars == 3
-                            ? 'Every cube right.'
+                      ? result.perfect
+                            ? result.stars == 3
+                                  ? 'Every cube right.'
+                                  : 'Every cube right. Ad help caps it at '
+                                        '$adHelpStars stars.'
                             : 'Wrong cubes show the right colour inside.'
                       : 'You need $need right to clear this level.',
                   maxLines: 2,
@@ -380,6 +489,18 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
                   ),
                 ),
               ),
+              if (offerRetry) ...[
+                const SizedBox(width: 10),
+                _ActionButton(
+                  'Same tower',
+                  key: const ValueKey('memory-retry-ad'),
+                  height: 44,
+                  outline: true,
+                  adBadge: true,
+                  fontSize: 15,
+                  onPressed: _adShowing ? null : _retrySameTower,
+                ),
+              ],
               if (result.passed) ...[
                 const SizedBox(width: 10),
                 Text(
@@ -404,7 +525,11 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
                 key: const ValueKey('memory-secondary'),
                 height: buttonHeight,
                 outline: true,
-                onPressed: result.passed ? () => _begin(number) : _toLevels,
+                onPressed: _adShowing
+                    ? null
+                    : result.passed
+                    ? () => _begin(number)
+                    : _toLevels,
               ),
             ),
             const SizedBox(width: 10),
@@ -418,7 +543,9 @@ class _MemoryGameScreenState extends State<MemoryGameScreen>
                     : 'Level ${number + 1}',
                 key: const ValueKey('memory-primary'),
                 height: buttonHeight,
-                onPressed: !result.passed
+                onPressed: _adShowing
+                    ? null
+                    : !result.passed
                     ? () => _begin(number)
                     : last
                     ? _toLevels
@@ -491,54 +618,60 @@ class _Palette extends StatelessWidget {
   const _Palette({required this.colors, required this.onPick});
 
   final int colors;
-  final ValueChanged<int> onPick;
+
+  /// Null while picking is paused (a peek or an ad); the cubes fade.
+  final ValueChanged<int>? onPick;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      for (var i = 0; i < colors; i++) ...[
-        if (i > 0) const SizedBox(width: 6),
-        Expanded(
-          child: Semantics(
-            button: true,
-            label: cubeColorNames[i],
-            excludeSemantics: true,
-            child: GestureDetector(
-              key: ValueKey('palette-$i'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onPick(i),
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: cubeColors[i],
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border(
-                        top: BorderSide(
-                          color: Color.lerp(
-                            cubeColors[i],
-                            AppColors.text,
-                            0.4,
-                          )!,
-                          width: 5,
+  Widget build(BuildContext context) => Opacity(
+    opacity: onPick == null ? 0.35 : 1,
+    child: Row(
+      children: [
+        for (var i = 0; i < colors; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          Expanded(
+            child: Semantics(
+              button: true,
+              enabled: onPick != null,
+              label: cubeColorNames[i],
+              excludeSemantics: true,
+              child: GestureDetector(
+                key: ValueKey('palette-$i'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onPick == null ? null : () => onPick!(i),
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: cubeColors[i],
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border(
+                          top: BorderSide(
+                            color: Color.lerp(
+                              cubeColors[i],
+                              AppColors.text,
+                              0.4,
+                            )!,
+                            width: 5,
+                          ),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: cubeColors[i].withValues(alpha: 0.45),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: cubeColors[i].withValues(alpha: 0.45),
-                          blurRadius: 12,
-                        ),
-                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ],
-    ],
+    ),
   );
 }
 
@@ -550,6 +683,8 @@ class _ActionButton extends StatelessWidget {
     required this.height,
     required this.onPressed,
     this.outline = false,
+    this.adBadge = false,
+    this.fontSize = 18,
   });
 
   final String text;
@@ -557,13 +692,17 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool outline;
 
+  /// Marks a button that plays a rewarded ad.
+  final bool adBadge;
+  final double fontSize;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     return Semantics(
       button: true,
       enabled: enabled,
-      label: text,
+      label: adBadge ? '$text, watch an ad' : text,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -590,14 +729,20 @@ class _ActionButton extends StatelessWidget {
             ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(
-                text,
-                maxLines: 1,
-                style: nunito(
-                  18,
-                  weight: 900,
-                  color: outline ? AppColors.green : AppColors.onGreen,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    text,
+                    maxLines: 1,
+                    style: nunito(
+                      fontSize,
+                      weight: 900,
+                      color: outline ? AppColors.green : AppColors.onGreen,
+                    ),
+                  ),
+                  if (adBadge) ...[const SizedBox(width: 6), const AdBadge()],
+                ],
               ),
             ),
           ),

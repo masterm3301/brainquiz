@@ -6,8 +6,18 @@ import 'memory_levels.dart';
 
 enum MemoryPhase { study, recall, result }
 
-/// Share of cubes that must be right to clear a level.
-const double passShare = 0.75;
+/// Percent of cubes that must be right to clear a level (one star).
+const int passPercent = 70;
+
+/// Percent of cubes right for two stars.
+const int twoStarPercent = 80;
+
+/// Fewest right cubes out of [total] that make [percent], rounded up.
+/// Whole-number maths, so 8 of 10 is exactly 80%.
+int rightNeeded(int total, int percent) => (total * percent + 99) ~/ 100;
+
+/// Most stars a round can earn once a rewarded ad has helped it.
+const int adHelpStars = 2;
 
 /// The outcome of one round.
 class MemoryResult {
@@ -16,6 +26,7 @@ class MemoryResult {
     required this.correct,
     required this.total,
     required this.secondsSaved,
+    this.adHelped = false,
   });
 
   final MemoryLevel level;
@@ -24,14 +35,27 @@ class MemoryResult {
   /// Whole study seconds left when the player said they were ready.
   final int secondsSaved;
 
-  bool get passed => correct >= (total * passShare).ceil();
+  /// A rewarded ad helped this round (a peek, or a retry of the same
+  /// tower), so it can earn at most [adHelpStars].
+  final bool adHelped;
 
-  /// 3 for every cube right, 2 for 90% or more, 1 for a pass, 0 for a miss.
+  bool get passed => correct >= rightNeeded(total, passPercent);
+
+  /// 3 for every cube right, 2 for [twoStarPercent] or more, 1 for a pass
+  /// ([passPercent] or more), 0 for a miss.
+  /// Never more than [adHelpStars] when an ad helped.
   int get stars {
     if (!passed) return 0;
-    if (correct == total) return 3;
-    return correct >= (total * 0.9).ceil() ? 2 : 1;
+    final earned = correct == total
+        ? 3
+        : correct >= rightNeeded(total, twoStarPercent)
+        ? 2
+        : 1;
+    return adHelped && earned > adHelpStars ? adHelpStars : earned;
   }
+
+  /// Every cube right, whatever the stars say.
+  bool get perfect => correct == total;
 
   /// 10 per right cube, plus 3 per study second saved. Nothing for a miss.
   int get points => passed ? 10 * correct + 3 * secondsSaved : 0;
@@ -40,11 +64,15 @@ class MemoryResult {
 /// One try at one Memory Towers level. Cubes are colour indexes into the
 /// level's palette, listed bottom to top, column by column.
 class MemoryRound extends ChangeNotifier {
-  MemoryRound({required this.level, required int seed})
+  /// [adHelped] marks a retry of the same tower paid for with an ad.
+  MemoryRound({required this.level, required this.seed, this._adHelped = false})
     : target = _generate(level, seed),
       placed = List<int?>.filled(level.cubes, null);
 
   final MemoryLevel level;
+
+  /// Builds [target]; the same seed gives the same tower.
+  final int seed;
   final List<int> target;
   final List<int?> placed;
 
@@ -57,7 +85,24 @@ class MemoryRound extends ChangeNotifier {
   int get cursor => _cursor;
 
   final List<({int index, int? before, int cursor})> _history = [];
-  bool get canUndo => _phase == MemoryPhase.recall && _history.isNotEmpty;
+  bool get canUndo =>
+      _phase == MemoryPhase.recall && !_peeking && _history.isNotEmpty;
+
+  bool _adHelped;
+  bool get adHelped => _adHelped;
+
+  bool _peekUsed = false;
+
+  /// One peek per round.
+  bool get peekUsed => _peekUsed;
+
+  bool _peeking = false;
+
+  /// True while a rewarded peek shows the tower again. Nothing can be
+  /// placed meanwhile.
+  bool get peeking => _peeking;
+
+  bool get canPeek => _phase == MemoryPhase.recall && !_peekUsed;
 
   int _secondsSaved = 0;
   MemoryResult? _result;
@@ -93,10 +138,26 @@ class MemoryRound extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Starts the peek earned by watching an ad. The round can then earn at
+  /// most [adHelpStars].
+  void startPeek() {
+    if (!canPeek) return;
+    _peekUsed = true;
+    _peeking = true;
+    _adHelped = true;
+    notifyListeners();
+  }
+
+  void endPeek() {
+    if (!_peeking) return;
+    _peeking = false;
+    notifyListeners();
+  }
+
   /// Moves the cursor to a cube already placed, so it can be recoloured,
   /// or to the next free slot.
   void select(int index) {
-    if (_phase != MemoryPhase.recall) return;
+    if (_phase != MemoryPhase.recall || _peeking) return;
     if (index < 0 || index >= placed.length) return;
     if (placed[index] == null && index != _firstEmpty) return;
     _cursor = index;
@@ -105,7 +166,7 @@ class MemoryRound extends ChangeNotifier {
 
   /// Puts [color] in the cursor's slot, then moves to the next free slot.
   void place(int color) {
-    if (_phase != MemoryPhase.recall) return;
+    if (_phase != MemoryPhase.recall || _peeking) return;
     if (color < 0 || color >= level.colors || placed[_cursor] == color) return;
     _history.add((index: _cursor, before: placed[_cursor], cursor: _cursor));
     placed[_cursor] = color;
@@ -129,6 +190,7 @@ class MemoryRound extends ChangeNotifier {
   MemoryResult check() {
     if (_result case final result?) return result;
     assert(complete, 'check() before every slot is filled');
+    _peeking = false;
     var correct = 0;
     for (var i = 0; i < target.length; i++) {
       if (placed[i] == target[i]) correct++;
@@ -138,6 +200,7 @@ class MemoryRound extends ChangeNotifier {
       correct: correct,
       total: target.length,
       secondsSaved: _secondsSaved,
+      adHelped: _adHelped,
     );
     _result = result;
     _phase = MemoryPhase.result;

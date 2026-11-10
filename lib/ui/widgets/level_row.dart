@@ -6,6 +6,20 @@ import '../../progress/progress.dart';
 import '../theme/text.dart';
 import '../theme/tokens.dart';
 
+/// Play, Continue level N, or Replay level N once every level is cleared.
+String playLabel(Progress progress) => !progress.hasPlayed
+    ? 'Play'
+    : progress.allCleared
+    ? 'Replay level ${progress.nextLevel}'
+    : 'Continue level ${progress.nextLevel}';
+
+/// "Not started", "N of M cleared" or "All M cleared".
+String progressStatus(Progress progress) => !progress.hasPlayed
+    ? 'Not started'
+    : progress.allCleared
+    ? 'All ${progress.lastLevel} cleared'
+    : '${progress.records.length} of ${progress.lastLevel} cleared';
+
 /// One row of a levels ladder: number, a detail line, and stars and best
 /// points once cleared. The current level glows green; locked rows are
 /// dimmed and ignore taps.
@@ -129,6 +143,20 @@ class StarRow extends StatelessWidget {
           ),
       ],
     ),
+  );
+}
+
+/// One star, lit yellow or unlit.
+class StarIcon extends StatelessWidget {
+  const StarIcon({super.key, this.size = 16, this.lit = true});
+
+  final double size;
+  final bool lit;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size(size, size),
+    painter: _StarPainter(lit ? AppColors.yellow : AppColors.trayBorder),
   );
 }
 

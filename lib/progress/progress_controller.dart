@@ -30,6 +30,9 @@ class ProgressController extends ChangeNotifier {
           {required int stars, required int points}) =>
       _commit(_progress.withCleared(number, stars: stars, points: points));
 
+  /// Wipes every record: stars, points and unlocks back to a new player.
+  Future<void> reset() => _commit(Progress(const {}, lastLevel: lastLevel));
+
   Future<void> _commit(Progress next) async {
     if (identical(next, _progress)) return;
     _progress = next;

@@ -5,8 +5,9 @@ import '../theme/tokens.dart';
 
 const _memoryRules = [
   'Study the cubes before the countdown ends. Tap I\'m ready to start early for bonus points.',
-  'Tap a colour to stack the next cube, bottom to top, left tower first. Tap any cube to change it.',
-  'Get three quarters right to clear the level. Every cube right earns three stars.',
+  'Tap a colour to stack the next cube, bottom to top. Big levels split into towers: fill the left one first. Tap any cube to change it.',
+  'Get 70% right to clear the level, 80% for two stars, every cube right for three.',
+  'Stuck? When an ad is ready, Peek shows the tower again and Same tower retries it after a miss. Ad help caps the round at two stars.',
 ];
 
 const _rules = [
@@ -15,40 +16,23 @@ const _rules = [
   'Lock it and hold through the wind. Wrong blocks and crooked drops can bring it down.',
 ];
 
-Future<void> showHowToPlay(BuildContext context) => showModalBottomSheet<void>(
-  context: context,
-  backgroundColor: AppColors.panel,
-  shape: const RoundedRectangleBorder(side: BorderSide(color: AppColors.rule)),
-  isScrollControlled: true,
-  builder: (_) => const HowToPlaySheet(),
-);
-
-class HowToPlaySheet extends StatelessWidget {
-  const HowToPlaySheet({super.key});
+/// The rules of both games, as a section of the About page.
+class HowToPlay extends StatelessWidget {
+  const HowToPlay({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('HOW TO PLAY', style: label(size: 11)),
-            const SizedBox(height: 14),
-            Text('Memory Towers', style: nunito(20, weight: 900)),
-            const SizedBox(height: 10),
-            ..._steps(_memoryRules),
-            const SizedBox(height: 8),
-            Text('Wind Levels', style: nunito(20, weight: 900)),
-            const SizedBox(height: 10),
-            ..._steps(_rules),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Memory Towers', style: nunito(20, weight: 900)),
+      const SizedBox(height: 10),
+      ..._steps(_memoryRules),
+      const SizedBox(height: 8),
+      Text('Wind Levels', style: nunito(20, weight: 900)),
+      const SizedBox(height: 10),
+      ..._steps(_rules),
+    ],
+  );
 }
 
 List<Widget> _steps(List<String> rules) => [

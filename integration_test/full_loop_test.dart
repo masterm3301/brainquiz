@@ -79,6 +79,8 @@ void main() {
     );
     await t.pump();
 
+    await t.tap(find.byKey(const ValueKey('mode-wind')));
+    await waitFor(t, find.byKey(const ValueKey('wind-play')));
     await t.tap(find.byKey(const ValueKey('wind-play')));
     await waitFor(t, find.text('Memorise the tower'));
     expect(find.text('Level 1 of 12'), findsOneWidget);

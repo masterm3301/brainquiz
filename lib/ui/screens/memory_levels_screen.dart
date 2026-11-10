@@ -8,12 +8,6 @@ import '../widgets/level_row.dart';
 import 'levels_screen.dart' show BackLabel;
 import 'memory_game_screen.dart';
 
-/// The three stages of the Memory Towers ladder.
-const _stages = [
-  ('Warm-up', '+2 cubes a level', 1, 8),
-  ('Climb', '+5 cubes a level', 9, 15),
-  ('Summit', '+7 cubes a level', 16, 22),
-];
 
 class MemoryLevelsScreen extends StatelessWidget {
   const MemoryLevelsScreen({super.key});
@@ -48,15 +42,18 @@ class MemoryLevelsScreen extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
-                for (final (name, step, first, last) in _stages) ...[
+                for (final (name, step, first, last) in memoryStageTable) ...[
                   const SizedBox(height: 22),
                   Row(
                     children: [
                       Text(name.toUpperCase(), style: label(size: 12)),
-                      const Spacer(),
-                      Text(
-                        step.toUpperCase(),
-                        style: label(size: 11, color: AppColors.textTertiary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          step.toUpperCase(),
+                          textAlign: TextAlign.right,
+                          style: label(size: 11, color: AppColors.textTertiary),
+                        ),
                       ),
                     ],
                   ),

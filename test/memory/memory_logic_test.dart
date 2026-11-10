@@ -10,14 +10,33 @@ MemoryRound recalling(int level, {int seed = 1}) =>
 
 void main() {
   group('levels', () {
-    test('5 cubes, then +2 x7, +5 x7, +7 x7', () {
+    test('3 cubes, +1 to level 12, then +2 x7, +5 x7, +7 x7', () {
       expect(memoryLevels.map((l) => l.cubes), [
-        5, 7, 9, 11, 13, 15, 17, 19, //
-        24, 29, 34, 39, 44, 49, 54, //
-        61, 68, 75, 82, 89, 96, 103,
+        3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, //
+        16, 18, 20, 22, 24, 26, 28, //
+        33, 38, 43, 48, 53, 58, 63, //
+        70, 77, 84, 91, 98, 105, 112,
       ]);
       expect(memoryLevels.map((l) => l.number),
-          List.generate(22, (i) => i + 1));
+          List.generate(33, (i) => i + 1));
+    });
+
+    test('stages cover every level once, in order', () {
+      var next = 1;
+      for (final (_, _, first, last) in memoryStageTable) {
+        expect(first, next);
+        next = last + 1;
+      }
+      expect(next - 1, memoryLevels.length);
+      expect(memoryStageName(1), 'Warm-up');
+      expect(memoryStageName(13), 'Build-up');
+      expect(memoryStageName(33), 'Summit');
+    });
+
+    test('the warm-up levels are one single tower', () {
+      for (final level in memoryLevels) {
+        expect(level.maxColumns, level.number <= 12 ? 1 : isNull);
+      }
     });
 
     test('colours start at 4, never drop, and stop at the palette size', () {
@@ -34,6 +53,54 @@ void main() {
         expect(memoryLevels[i].studySeconds,
             greaterThan(memoryLevels[i - 1].studySeconds));
       }
+    });
+  });
+
+  group('ad help', () {
+    MemoryRound full(MemoryRound r) {
+      for (final c in r.target) {
+        r.place(c);
+      }
+      return r;
+    }
+
+    test('a peek is once per round, pauses placing, and caps stars at 2', () {
+      final round = recalling(3);
+      expect(round.canPeek, isTrue);
+      round.startPeek();
+      expect(round.peeking, isTrue);
+      round.place(0);
+      expect(round.filled, 0, reason: 'no placing during a peek');
+      round.endPeek();
+      expect(round.canPeek, isFalse);
+      final result = full(round).check();
+      expect(result.perfect, isTrue);
+      expect(result.stars, adHelpStars);
+      expect(result.points, greaterThan(0));
+    });
+
+    test('no peek outside the rebuild', () {
+      final round = MemoryRound(level: memoryLevels[2], seed: 1);
+      round.startPeek();
+      expect(round.peeking, isFalse);
+    });
+
+    test('a retry of the same tower has the same colours and the cap', () {
+      final first = MemoryRound(level: memoryLevels[5], seed: 7);
+      final again =
+          MemoryRound(level: memoryLevels[5], seed: 7, adHelped: true);
+      expect(again.target, first.target);
+      again.finishStudy();
+      expect(full(again).check().stars, adHelpStars);
+    });
+
+    test('a capped round still fails below 70%', () {
+      final round = recalling(3)..startPeek();
+      round.endPeek();
+      for (final c in round.target) {
+        round.place((c + 1) % round.level.colors);
+      }
+      expect(round.check().stars, 0);
     });
   });
 
@@ -103,12 +170,12 @@ void main() {
       expect(r.complete, isTrue);
       final result = r.check();
       expect(r.phase, MemoryPhase.result);
-      expect(result.correct, 5);
+      expect(result.correct, 3);
       expect(result.stars, 3);
-      expect(result.points, 50 + 12);
+      expect(result.points, 30 + 12);
     });
 
-    test('stars by share right, and a miss below three quarters', () {
+    test('stars by share right, and a miss below 70%', () {
       MemoryResult withRight(int correct, int total) => MemoryResult(
             level: memoryLevels.first,
             correct: correct,
@@ -117,12 +184,21 @@ void main() {
           );
       expect(withRight(19, 19).stars, 3);
       expect(withRight(18, 19).stars, 2);
-      expect(withRight(17, 19).stars, 1);
-      expect(withRight(15, 19).stars, 1);
-      expect(withRight(14, 19).stars, 0);
-      expect(withRight(14, 19).passed, isFalse);
-      expect(withRight(14, 19).points, 0);
-      expect(withRight(4, 5).passed, isTrue);
+      expect(withRight(16, 19).stars, 2); // 84%
+      expect(withRight(15, 19).stars, 1); // 79%
+      expect(withRight(14, 19).stars, 1); // 74%
+      expect(withRight(13, 19).stars, 0); // 68%
+      expect(withRight(13, 19).passed, isFalse);
+      expect(withRight(13, 19).points, 0);
+      // The reported case: one wrong out of nine is 89%, two stars.
+      expect(withRight(8, 9).stars, 2);
+      expect(withRight(7, 9).stars, 1);
+      expect(withRight(6, 9).stars, 0);
+      // Exactly 80% and 70% count, with no float rounding slips.
+      expect(withRight(8, 10).stars, 2);
+      expect(withRight(7, 10).stars, 1);
+      expect(withRight(12, 15).stars, 2);
+      expect(withRight(4, 5).stars, 2);
       expect(withRight(3, 5).passed, isFalse);
     });
   });
@@ -166,9 +242,17 @@ void main() {
           greaterThan(layout.rectOf(0).right));
     });
 
-    test('103 cubes stay tappable on a small phone', () {
-      final layout = CubeLayout(103, const Size(240, 230));
-      expect(layout.cube, greaterThanOrEqualTo(20));
+    test('maxColumns keeps a tall tower in one column', () {
+      final layout = CubeLayout(12, const Size(280, 300), maxColumns: 1);
+      expect(layout.columns, 1);
+      expect(layout.columnHeights, [12]);
+      expect(layout.cube, 25);
+      expect(layout.indexAt(layout.rectOf(11).center), 11);
+    });
+
+    test('112 cubes stay tappable on a small phone', () {
+      final layout = CubeLayout(112, const Size(240, 230));
+      expect(layout.cube, greaterThanOrEqualTo(18));
     });
 
     test('a short tower is one column, not giant cubes', () {
